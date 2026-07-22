@@ -114,7 +114,7 @@ export default function App() {
     <main>
       <header className="topbar">
         <a className="brand" href="./" aria-label="四阶段趋势投资首页">
-          <span className="brand-mark">阶</span>
+          <span className="brand-mark">S</span>
           <span><strong>四阶段趋势投资</strong><small>4 STAGE</small></span>
         </a>
         <div className="status-pill"><span />本周动态 · 每日更新</div>
