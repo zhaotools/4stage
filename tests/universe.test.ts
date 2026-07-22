@@ -26,4 +26,15 @@ describe("first expansion universe", () => {
     expect(new Set(assets.map((asset) => asset.symbol)).size).toBe(7);
     expect(assets.every((asset) => asset.name.length > 0 && asset.providerSymbol)).toBe(true);
   });
+
+  it("contains the first high-liquidity US stock and ETF universe", async () => {
+    const stocks = await config("us-stocks");
+    const etfs = await config("us-etfs");
+    const assets = [...stocks, ...etfs];
+    expect(stocks).toHaveLength(22);
+    expect(etfs).toHaveLength(18);
+    expect(new Set(assets.map((asset) => asset.symbol)).size).toBe(40);
+    expect(assets.every((asset) => /^[A-Z]+$/.test(asset.symbol))).toBe(true);
+    expect(assets.every((asset) => asset.name.length > 0 && asset.providerSymbol === asset.symbol)).toBe(true);
+  });
 });

@@ -68,8 +68,8 @@ export interface StagePoint {
 export interface AssetSummary {
   symbol: string;
   name: string;
-  assetType: "stock" | "etf" | "index" | "crypto" | "crypto_stock";
-  exchange: "SSE" | "SZSE" | "CRYPTO" | "NASDAQ" | "NYSE";
+  assetType: "stock" | "etf" | "index" | "crypto" | "crypto_stock" | "us_stock" | "us_etf";
+  exchange: "SSE" | "SZSE" | "CRYPTO" | "NASDAQ" | "NYSE" | "NYSEARCA";
   benchmark: string;
   category?: string;
   industry?: string;

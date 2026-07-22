@@ -48,6 +48,12 @@ const crypto = JSON.parse(
 const cryptoStocks = JSON.parse(
   await readFile(join(process.cwd(), "config", "crypto-stocks.json"), "utf8"),
 ) as AssetConfig[];
+const usStocks = JSON.parse(
+  await readFile(join(process.cwd(), "config", "us-stocks.json"), "utf8"),
+) as AssetConfig[];
+const usEtfs = JSON.parse(
+  await readFile(join(process.cwd(), "config", "us-etfs.json"), "utf8"),
+) as AssetConfig[];
 
 const numberValue = (value: unknown) => Number(value);
 const isoDate = (value: unknown) => {
@@ -204,6 +210,18 @@ const overseasAssets: RuntimeAsset[] = [
     dataStatus: "live" as const,
     dataSource: "yahoo" as const,
   })),
+  ...usStocks.map((asset) => ({
+    ...asset,
+    assetType: "us_stock" as const,
+    dataStatus: "live" as const,
+    dataSource: "yahoo" as const,
+  })),
+  ...usEtfs.map((asset) => ({
+    ...asset,
+    assetType: "us_etf" as const,
+    dataStatus: "live" as const,
+    dataSource: "yahoo" as const,
+  })),
 ];
 const onlyOverseas = process.env.DATA_ONLY === "overseas";
 const domesticAssets: RuntimeAsset[] = onlyOverseas ? [] : [
@@ -284,7 +302,7 @@ if (onlyOverseas) {
     await readFile(join(outputDirectory, "assets.json"), "utf8"),
   ) as AssetSummary[];
   completed = [
-    ...cached.filter((asset) => asset.assetType !== "crypto" && asset.assetType !== "crypto_stock"),
+    ...cached.filter((asset) => asset.dataSource !== "yahoo"),
     ...updated,
   ];
 }
