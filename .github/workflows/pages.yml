@@ -33,6 +33,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
       - name: Generate live A-share data
+        if: github.event_name != 'push'
         env:
           DATA_PROVIDER: eastmoney
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
