@@ -76,7 +76,7 @@ main { min-height: 100vh; }
 .query-strip {
   min-height: 62px;
   display: grid;
-  grid-template-columns: auto minmax(250px, 380px) auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(240px, 340px) auto auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 16px;
   padding: 10px 14px 10px 18px;
@@ -94,6 +94,7 @@ main { min-height: 100vh; }
   background: #faf9f3; color: #44574f; font-size: 12px; font-weight: 600;
 }
 .asset-type-filter:focus { border-color: #315d50; box-shadow: 0 0 0 3px rgba(49,93,80,.08); }
+.common-etf-filter { min-width: 158px; }
 .compact-options { margin: 0; display: flex; min-width: 0; gap: 5px; overflow-x: auto; }
 .compact-options button { width: auto; min-width: max-content; padding: 7px 10px; border: 1px solid transparent; }
 .compact-options button span { display: flex; align-items: center; gap: 7px; }
@@ -261,6 +262,7 @@ footer { margin-top: 24px; padding: 16px 0 0; border-top: 1px solid rgba(23,35,3
   .query-strip > label { display: none; }
   .data-note { position: absolute; right: 24px; top: 83px; }
   .asset-type-filter { width: 100%; }
+  .common-etf-filter { min-width: 0; }
   .asset-heading { align-items: flex-start; }
   .overview-grid { margin-top: 16px; }
   .snapshot-card { grid-template-columns: 1fr 1fr; }

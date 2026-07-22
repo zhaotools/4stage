@@ -12,6 +12,27 @@ const coreStageMeta = {
   4: stageMeta.stage_4,
 } as const;
 
+const commonEtfGroups = [
+  {
+    label: "宽基与红利",
+    symbols: ["510300.SH", "510050.SH", "510500.SH", "512100.SH", "159915.SZ", "588000.SH", "510880.SH", "515180.SH"],
+  },
+  {
+    label: "科技成长",
+    symbols: ["512480.SH", "159995.SZ", "515000.SH", "159819.SZ", "562500.SH", "515880.SH"],
+  },
+  {
+    label: "常见行业",
+    symbols: ["512880.SH", "512800.SH", "512010.SH", "512170.SH", "159992.SZ", "515030.SH", "515790.SH", "516160.SH", "512690.SH", "512400.SH", "515220.SH"],
+  },
+  {
+    label: "黄金、债券与海外",
+    symbols: ["518880.SH", "511010.SH", "511260.SH", "513050.SH", "513180.SH", "159920.SZ", "513100.SH", "513500.SH"],
+  },
+] as const;
+
+const commonEtfSymbols = new Set<string>(commonEtfGroups.flatMap((group) => group.symbols));
+
 function scoreEntries(scores: Record<CoreStage, number> | null) {
   if (!scores) return [];
   return ([1, 2, 3, 4] as CoreStage[]).map((stage) => ({ stage, score: scores[stage] }));
@@ -112,6 +133,27 @@ export default function App() {
               autoComplete="off"
             />
           </div>
+          <select
+            className="asset-type-filter common-etf-filter"
+            aria-label="常用ETF"
+            value={commonEtfSymbols.has(selectedSymbol) ? selectedSymbol : ""}
+            onChange={(event) => {
+              if (!event.target.value) return;
+              setSelectedSymbol(event.target.value);
+              setAssetTypeFilter("etf");
+              setQuery("");
+            }}
+          >
+            <option value="">常用ETF</option>
+            {commonEtfGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.symbols.map((symbol) => {
+                  const asset = assets.find((candidate) => candidate.symbol === symbol);
+                  return asset ? <option key={symbol} value={symbol}>{asset.name} · {symbol.slice(0, 6)}</option> : null;
+                })}
+              </optgroup>
+            ))}
+          </select>
           <select
             className="asset-type-filter"
             aria-label="资产类型"
