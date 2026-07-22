@@ -3,14 +3,16 @@ import { join } from "node:path";
 import { analyzeStages } from "../src/domain/stageEngine";
 import type { AssetAnalysis, AssetSummary } from "../src/domain/types";
 import { aggregateWeekly, type DailyBar } from "../src/data/weekly";
-import { loadEastmoneyDailyBars } from "./eastmoney";
+import { loadEastmoneyBoardConstituents, loadEastmoneyDailyBars } from "./eastmoney";
 import { TushareClient } from "./tushare";
+import { toPublishedAnalysis } from "./publish-analysis";
 
-interface EtfConfig {
+interface AssetConfig {
   symbol: string;
   name: string;
   benchmark: string;
   exchange: "SSE" | "SZSE";
+  category?: string;
 }
 
 const token = process.env.TUSHARE_TOKEN;
@@ -27,7 +29,10 @@ const endDate = new Date().toISOString().slice(0, 10).replaceAll("-", "");
 
 const etfs = JSON.parse(
   await readFile(join(process.cwd(), "config", "etfs.json"), "utf8"),
-) as EtfConfig[];
+) as AssetConfig[];
+const indexes = JSON.parse(
+  await readFile(join(process.cwd(), "config", "indexes.json"), "utf8"),
+) as AssetConfig[];
 
 const numberValue = (value: unknown) => Number(value);
 const isoDate = (value: unknown) => {
@@ -35,11 +40,26 @@ const isoDate = (value: unknown) => {
   return `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`;
 };
 
-async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf") {
+async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf" | "index") {
   if (provider === "eastmoney") {
     return aggregateWeekly(await loadEastmoneyDailyBars(symbol, startDate, endDate));
   }
   if (!client) throw new Error("Tushare client is unavailable");
+  if (assetType === "index") {
+    const prices = await client.query(
+      "index_daily",
+      { ts_code: symbol, start_date: startDate, end_date: endDate },
+      ["ts_code", "trade_date", "open", "high", "low", "close", "vol"],
+    );
+    return aggregateWeekly(prices.map((row) => ({
+      date: isoDate(row.trade_date),
+      open: numberValue(row.open),
+      high: numberValue(row.high),
+      low: numberValue(row.low),
+      close: numberValue(row.close),
+      volume: row.vol === null ? null : numberValue(row.vol),
+    })));
+  }
   const priceApi = assetType === "stock" ? "daily" : "fund_daily";
   const factorApi = assetType === "stock" ? "adj_factor" : "fund_adj";
   const prices = await client.query(
@@ -80,10 +100,18 @@ async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf") {
 }
 
 async function currentHs300(): Promise<AssetSummary[]> {
-  if (process.env.INCLUDE_HS300 !== "true") return [];
-  if (provider !== "tushare" || !client) {
-    console.warn("INCLUDE_HS300 requires DATA_PROVIDER=tushare; skipping constituents");
-    return [];
+  if (process.env.INCLUDE_HS300 === "false") return [];
+  if (!client) {
+    const constituents = await loadEastmoneyBoardConstituents("BK0500");
+    return constituents.map((asset) => ({
+      ...asset,
+      assetType: "stock" as const,
+      benchmark: "000300.SH",
+      category: "沪深300",
+      indexMemberships: ["沪深300"],
+      dataStatus: "live" as const,
+      dataSource: provider,
+    }));
   }
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - 180);
@@ -103,7 +131,7 @@ async function currentHs300(): Promise<AssetSummary[]> {
   const basics = await client.query(
     "stock_basic",
     { list_status: "L" },
-    ["ts_code", "name", "exchange", "list_date"],
+    ["ts_code", "name", "exchange", "industry", "list_date"],
   );
   return basics
     .filter((row) => codes.has(String(row.ts_code)))
@@ -113,7 +141,12 @@ async function currentHs300(): Promise<AssetSummary[]> {
       assetType: "stock" as const,
       exchange: String(row.exchange) === "SSE" ? "SSE" as const : "SZSE" as const,
       benchmark: "000300.SH",
+      category: "沪深300",
+      industry: row.industry ? String(row.industry) : undefined,
+      indexMemberships: ["沪深300"],
+      listDate: row.list_date ? isoDate(row.list_date) : undefined,
       dataStatus: "live" as const,
+      dataSource: provider,
     }));
 }
 
@@ -125,14 +158,25 @@ const assets: AssetSummary[] = [
     dataStatus: "live" as const,
     dataSource: provider,
   })),
+  ...indexes.map((index) => ({
+    ...index,
+    assetType: "index" as const,
+    dataStatus: "live" as const,
+    dataSource: provider,
+  })),
   ...(await currentHs300()),
 ];
 
-const successful: AssetSummary[] = [];
-for (const [index, asset] of assets.entries()) {
+const successful: Array<AssetSummary | undefined> = new Array(assets.length);
+let nextAssetIndex = 0;
+async function updateNextAsset() {
+  while (nextAssetIndex < assets.length) {
+    const index = nextAssetIndex;
+    nextAssetIndex += 1;
+    const asset = assets[index];
   try {
     console.log(`[${index + 1}/${assets.length}] ${asset.symbol} ${asset.name}`);
-    const bars = await loadAdjustedBars(asset.symbol, asset.assetType === "stock" ? "stock" : "etf");
+      const bars = await loadAdjustedBars(asset.symbol, asset.assetType);
     if (bars.length < 60) throw new Error(`Insufficient weekly history: ${bars.length}`);
     const analysis: AssetAnalysis = {
       ...asset,
@@ -140,13 +184,23 @@ for (const [index, asset] of assets.entries()) {
       bars,
       stages: analyzeStages(bars),
     };
-    await writeFile(join(outputDirectory, `${asset.symbol}.json`), JSON.stringify(analysis));
-    successful.push(asset);
+    await writeFile(
+      join(outputDirectory, `${asset.symbol}.json`),
+      JSON.stringify(toPublishedAnalysis(analysis)),
+    );
+      successful[index] = asset;
   } catch (error) {
     console.error(`Skipped ${asset.symbol}:`, error);
   }
+  }
 }
 
-if (successful.length === 0) throw new Error("No asset data was generated");
-await writeFile(join(outputDirectory, "assets.json"), JSON.stringify(successful, null, 2));
-console.log(`Generated live analysis for ${successful.length}/${assets.length} assets via ${provider}`);
+const concurrency = provider === "eastmoney"
+  ? Math.max(1, Number(process.env.DATA_CONCURRENCY ?? 4))
+  : 1;
+await Promise.all(Array.from({ length: concurrency }, () => updateNextAsset()));
+
+const completed = successful.filter((asset): asset is AssetSummary => asset !== undefined);
+if (completed.length === 0) throw new Error("No asset data was generated");
+await writeFile(join(outputDirectory, "assets.json"), JSON.stringify(completed, null, 2));
+console.log(`Generated live analysis for ${completed.length}/${assets.length} assets via ${provider}`);

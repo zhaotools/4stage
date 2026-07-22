@@ -2,6 +2,7 @@ import { setDefaultResultOrder } from "node:dns";
 import type { DailyBar } from "../src/data/weekly";
 
 const API_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
+const LIST_API_URL = "https://push2.eastmoney.com/api/qt/clist/get";
 setDefaultResultOrder("ipv4first");
 
 interface EastmoneyResponse {
@@ -12,6 +13,20 @@ interface EastmoneyResponse {
     name: string;
     klines: string[];
   };
+}
+
+interface EastmoneyListResponse {
+  rc: number;
+  data: null | {
+    total: number;
+    diff: Array<{ f12: string; f13: number; f14: string }>;
+  };
+}
+
+export interface EastmoneyConstituent {
+  symbol: string;
+  name: string;
+  exchange: "SSE" | "SZSE";
 }
 
 function marketId(symbol: string) {
@@ -90,4 +105,45 @@ export async function loadEastmoneyDailyBars(
   const bars = parseEastmoneyKlines(payload.data.klines);
   if (bars.length < 260) throw new Error(`Insufficient daily history for ${symbol}: ${bars.length}`);
   return bars;
+}
+
+export async function loadEastmoneyBoardConstituents(
+  boardCode: string,
+): Promise<EastmoneyConstituent[]> {
+  const pageSize = 100;
+  const result: EastmoneyConstituent[] = [];
+  let total = Number.POSITIVE_INFINITY;
+  for (let page = 1; result.length < total; page += 1) {
+    const params = new URLSearchParams({
+      pn: String(page),
+      pz: String(pageSize),
+      po: "1",
+      np: "1",
+      fltt: "2",
+      invt: "2",
+      fid: "f3",
+      fs: `b:${boardCode}`,
+      fields: "f12,f14,f13",
+    });
+    const response = await fetch(`${LIST_API_URL}?${params}`, {
+      headers: { "user-agent": "a-share-stage-analysis/0.1" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) throw new Error(`Eastmoney list HTTP ${response.status}: ${boardCode}`);
+    const payload = (await response.json()) as EastmoneyListResponse;
+    if (payload.rc !== 0 || !payload.data) {
+      throw new Error(`Eastmoney returned no constituents for ${boardCode}`);
+    }
+    total = payload.data.total;
+    result.push(...payload.data.diff.map((item) => ({
+      symbol: `${item.f12}.${item.f13 === 1 ? "SH" : "SZ"}`,
+      name: item.f14,
+      exchange: item.f13 === 1 ? "SSE" as const : "SZSE" as const,
+    })));
+    if (payload.data.diff.length === 0) break;
+  }
+  if (result.length !== total) {
+    throw new Error(`Incomplete Eastmoney constituent list for ${boardCode}: ${result.length}/${total}`);
+  }
+  return result;
 }

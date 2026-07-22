@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { PriceChart } from "./components/PriceChart";
-import type { AssetAnalysis, AssetSummary, CoreStage } from "./domain/types";
+import type { AssetSummary, CoreStage, PublishedAssetAnalysis, StagePoint } from "./domain/types";
 import { stageMeta } from "./lib/stageMeta";
+import { normalizeAssetSearch } from "./lib/search";
 import "./styles.css";
 
 const coreStageMeta = {
@@ -16,11 +17,16 @@ function scoreEntries(scores: Record<CoreStage, number> | null) {
   return ([1, 2, 3, 4] as CoreStage[]).map((stage) => ({ stage, score: scores[stage] }));
 }
 
+function isFullStagePoint(point: PublishedAssetAnalysis["stages"][number]): point is StagePoint {
+  return "features" in point && "reasons" in point && "scores" in point;
+}
+
 export default function App() {
   const [assets, setAssets] = useState<AssetSummary[]>([]);
   const [query, setQuery] = useState("");
+  const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | AssetSummary["assetType"]>("all");
   const [selectedSymbol, setSelectedSymbol] = useState("510300.SH");
-  const [analysis, setAnalysis] = useState<AssetAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<PublishedAssetAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +46,7 @@ export default function App() {
     fetch(`./data/${selectedSymbol}.json`)
       .then((response) => {
         if (!response.ok) throw new Error("该资产的阶段数据暂不可用");
-        return response.json() as Promise<AssetAnalysis>;
+        return response.json() as Promise<PublishedAssetAnalysis>;
       })
       .then(setAnalysis)
       .catch((reason: Error) => setError(reason.message))
@@ -48,17 +54,36 @@ export default function App() {
   }, [selectedSymbol]);
 
   const matches = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return assets;
-    return assets.filter(
-      (asset) =>
-        asset.symbol.toLowerCase().includes(normalized) ||
-        asset.name.toLowerCase().includes(normalized),
-    );
-  }, [assets, query]);
+    const normalized = normalizeAssetSearch(query);
+    return assets
+      .filter((asset) => assetTypeFilter === "all" || asset.assetType === assetTypeFilter)
+      .filter((asset) => {
+        if (!normalized) return true;
+        return [
+          asset.symbol,
+          asset.symbol.slice(0, 6),
+          asset.name,
+          asset.category,
+          asset.industry,
+          ...(asset.indexMemberships ?? []),
+          ...(asset.searchTerms ?? []),
+        ].some((value) => value && normalizeAssetSearch(value).includes(normalized));
+      })
+      .sort((left, right) => {
+        if (left.symbol === selectedSymbol) return -1;
+        if (right.symbol === selectedSymbol) return 1;
+        const leftStarts = normalized && (normalizeAssetSearch(left.symbol).startsWith(normalized) || normalizeAssetSearch(left.name).startsWith(normalized));
+        const rightStarts = normalized && (normalizeAssetSearch(right.symbol).startsWith(normalized) || normalizeAssetSearch(right.name).startsWith(normalized));
+        if (leftStarts !== rightStarts) return leftStarts ? -1 : 1;
+        return left.symbol.localeCompare(right.symbol);
+      });
+  }, [assets, assetTypeFilter, query, selectedSymbol]);
   const selectedAsset = assets.find((asset) => asset.symbol === selectedSymbol);
 
-  const latest = analysis?.stages.at(-1) ?? null;
+  const latestCandidate = analysis?.stages.at(-1) ?? null;
+  const latest: StagePoint | null = latestCandidate && isFullStagePoint(latestCandidate)
+    ? latestCandidate
+    : null;
   const latestBar = analysis?.bars.at(-1) ?? null;
   const meta = latest ? stageMeta[latest.state] : stageMeta.insufficient_data;
   const scores = scoreEntries(latest?.scores ?? null);
@@ -87,8 +112,19 @@ export default function App() {
               autoComplete="off"
             />
           </div>
+          <select
+            className="asset-type-filter"
+            aria-label="资产类型"
+            value={assetTypeFilter}
+            onChange={(event) => setAssetTypeFilter(event.target.value as "all" | AssetSummary["assetType"])}
+          >
+            <option value="all">全部</option>
+            <option value="etf">ETF</option>
+            <option value="index">指数</option>
+            <option value="stock">股票</option>
+          </select>
           <div className="asset-options compact-options">
-            {matches.slice(0, 4).map((asset) => (
+            {matches.slice(0, 8).map((asset) => (
               <button
                 key={asset.symbol}
                 className={asset.symbol === selectedSymbol ? "selected" : ""}
@@ -103,6 +139,7 @@ export default function App() {
             ))}
             {assets.length > 0 && matches.length === 0 && <p className="empty-search">当前样本中没有匹配资产</p>}
           </div>
+          <small className="result-count">{matches.length}项</small>
           <small className="data-note">
             {selectedAsset?.dataStatus === "live" ? "真实行情 · 前复权" : "当前为模拟数据"}
           </small>

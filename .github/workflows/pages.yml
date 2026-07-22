@@ -32,9 +32,11 @@ jobs:
       # platform-specific optional dependencies in the ephemeral Linux runner.
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
-      - name: Generate live ETF data
+      - name: Generate live A-share data
         env:
           DATA_PROVIDER: eastmoney
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+          INCLUDE_HS300: true
         run: pnpm data:update
       - name: Validate model stability
         run: pnpm model:validate

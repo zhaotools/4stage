@@ -7,18 +7,18 @@ import {
   createChart,
   type Time,
 } from "lightweight-charts";
-import type { StagePoint, WeeklyBar } from "../domain/types";
+import type { StageHistoryPoint, WeeklyBar } from "../domain/types";
 import { stageMeta } from "../lib/stageMeta";
 
 interface PriceChartProps {
   bars: WeeklyBar[];
-  stages: StagePoint[];
+  stages: StageHistoryPoint[];
 }
 
 interface StageSegment {
   start: number;
   end: number;
-  state: StagePoint["state"];
+  state: StageHistoryPoint["state"];
 }
 
 const VISIBLE_WEEKS = 96;

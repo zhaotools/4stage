@@ -12,15 +12,17 @@
 - [x] 30周均线、ATR、斜率、突破和波动特征
 - [x] Stage 1～4评分模型
 - [x] 有记忆的阶段状态机、过渡状态和两周确认
-- [x] 真实ETF组合诊断及“不明确”占比质量门槛
+- [x] 42只主流ETF、8个主要指数和当前沪深300成分股
+- [x] 全资产组合诊断及“不明确”占比质量门槛
 - [x] “横盘状态 → 前置趋势 → Stage 1/3”分层识别模型
 - [x] 趋势证据冲突时输出“不明确”，避免强制分类
 - [x] 因果性测试，算法不读取未来数据
 - [x] 免密真实ETF数据适配器、前复权处理和数据校验
 - [x] Tushare可选适配器和复权处理
 - [ ] 加入相对强弱曲线及评分
-- [ ] 扩充并核验主要ETF清单
-- [ ] 接入当前及历史沪深300成分股
+- [x] 扩充并核验第一批主要ETF清单
+- [x] 免密自动同步当前沪深300成分股
+- [ ] 保存历史沪深300成分，消除幸存者偏差
 - [x] 第一版人工样本校准（后续验证暂停）
 
 ## 本地运行
@@ -49,7 +51,8 @@ pnpm model:validate
 
 ## 真实数据更新
 
-默认数据源无需令牌，可直接更新`config/etfs.json`中的ETF：
+默认数据源无需令牌，会更新`config/etfs.json`中的ETF、`config/indexes.json`中的指数，
+并自动同步当前沪深300成分股：
 
 ```bash
 pnpm data:update
@@ -61,17 +64,18 @@ pnpm data:update
 DATA_PROVIDER=tushare TUSHARE_TOKEN=your_token pnpm data:update
 ```
 
-默认更新`config/etfs.json`中的ETF。加入当前沪深300成分股：
+如只想更新ETF和指数，可以暂时关闭沪深300：
 
 ```bash
-DATA_PROVIDER=tushare TUSHARE_TOKEN=your_token INCLUDE_HS300=true pnpm data:update
+INCLUDE_HS300=false pnpm data:update
 ```
 
 重要说明：
 
 - 股票复权需要`adj_factor`权限；
 - ETF复权需要`fund_adj`权限；
-- 沪深300成分股需要`index_weight`和`stock_basic`权限；
+- 免密模式从同一来源同步沪深300当前成分和前复权行情；
+- 使用Tushare同步成分时，`index_weight`和`stock_basic`需要相应权限；
 - 原始行情和令牌不会写入Git仓库；
 - 公开展示前应确认数据供应商的外部展示与衍生数据条款。
 
@@ -80,15 +84,14 @@ DATA_PROVIDER=tushare TUSHARE_TOKEN=your_token INCLUDE_HS300=true pnpm data:upda
 仓库包含`.github/workflows/pages.yml`：
 
 1. 运行单元测试；
-2. 免密生成主要ETF真实数据，不再自动退回模拟数据；
+2. 免密生成ETF、指数和沪深300股票真实数据，不再自动退回模拟数据；
 3. 构建静态网页；
 4. 部署到GitHub Pages；
 5. 每周六自动更新一次。
 
-在仓库设置中完成两项配置：
+在仓库设置中只需完成一项配置：
 
 1. `Settings → Pages → Source`选择`GitHub Actions`；
-2. 如需扩展沪深300成分股，再在`Actions`中添加`TUSHARE_TOKEN`并切换数据源。
 
 ## 阶段定义
 
@@ -112,8 +115,8 @@ DATA_PROVIDER=tushare TUSHARE_TOKEN=your_token INCLUDE_HS300=true pnpm data:upda
 src/domain/       阶段模型、类型和计算引擎
 src/data/         日线到周线的数据处理
 src/components/   查询页和周线图表
-scripts/          样例及Tushare数据更新
-config/           支持的ETF资产清单
+scripts/          数据源、样例和自动更新
+config/           支持的ETF及指数资产清单
 tests/            因果性和数据处理测试
 public/data/      构建时生成的查询数据
 .github/workflows GitHub Pages自动更新与部署
@@ -121,8 +124,8 @@ public/data/      构建时生成的查询数据
 
 ## 路线图
 
-1. 用主要ETF完成数据和算法闭环；
-2. 加入当前沪深300成分股；
-3. 保存历史成分，消除回测幸存者偏差；
-4. 扩充主要ETF覆盖范围；
+1. 42只主要ETF、8个指数和当前沪深300完成数据闭环；
+2. 保存历史成分，消除回测幸存者偏差；
+3. 分资产类型校准股票、ETF和指数阈值；
+4. 加入中证500成分股；
 5. 加入相对强弱和阶段转换统计。

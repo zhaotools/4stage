@@ -71,6 +71,11 @@ export interface AssetSummary {
   assetType: "stock" | "etf" | "index";
   exchange: "SSE" | "SZSE";
   benchmark: string;
+  category?: string;
+  industry?: string;
+  indexMemberships?: string[];
+  listDate?: string;
+  searchTerms?: string[];
   dataStatus: "sample" | "live";
   dataSource?: "eastmoney" | "tushare" | "sample";
 }
@@ -79,4 +84,10 @@ export interface AssetAnalysis extends AssetSummary {
   generatedAt: string;
   bars: WeeklyBar[];
   stages: StagePoint[];
+}
+
+export type StageHistoryPoint = Pick<StagePoint, "date" | "state">;
+
+export interface PublishedAssetAnalysis extends Omit<AssetAnalysis, "stages"> {
+  stages: Array<StageHistoryPoint | StagePoint>;
 }
