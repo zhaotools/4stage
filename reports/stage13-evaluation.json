@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "evaluatedAt": "2026-07-22T00:40:15.741Z",
+  "sourceFile": "stage13-labels.json",
+  "completeness": {
+    "labeled": 59,
+    "expected": 59
+  },
+  "distribution": {
+    "stage_1": 16,
+    "stage_3": 11,
+    "uncertain": 32,
+    "skip": 0
+  },
+  "usable": 27,
+  "accuracy": 0.7777777777777778,
+  "balancedAccuracy": 0.7698863636363636,
+  "recall": {
+    "stage_1": 0.8125,
+    "stage_3": 0.7272727272727273
+  },
+  "confusion": {
+    "stage_1": {
+      "stage_1": 13,
+      "stage_3": 3
+    },
+    "stage_3": {
+      "stage_1": 3,
+      "stage_3": 8
+    }
+  },
+  "groupMeans": {
+    "stage_1": {
+      "count": 16,
+      "previousSlope": -0.033743749999999996,
+      "consolidationScore": 54.25,
+      "priorTrendSlope": -0.06326875,
+      "priorTrendReturn26": -0.06728750000000001,
+      "rangePosition52": 0.41645625000000003,
+      "priceDistance": -0.06411250000000004,
+      "normalizedSlope": -0.014043749999999997
+    },
+    "stage_3": {
+      "count": 11,
+      "previousSlope": 0.05470909090909091,
+      "consolidationScore": 51.63636363636363,
+      "priorTrendSlope": 0.06470909090909091,
+      "priorTrendReturn26": 0.1267090909090909,
+      "rangePosition52": 0.5594454545454546,
+      "priceDistance": 0.0066,
+      "normalizedSlope": 0.017127272727272727
+    }
+  },
+  "disagreements": [
+    {
+      "candidateId": "512660.SH-2022-08-26",
+      "symbol": "512660.SH",
+      "date": "2022-08-26",
+      "human": "stage_3",
+      "predicted": "stage_1",
+      "correct": false,
+      "margin": 30,
+      "scores": {
+        "1": 63,
+        "3": 33
+      },
+      "features": {
+        "normalizedSlope": -0.0712,
+        "previousSlope": -0.1262,
+        "consolidationScore": 48,
+        "priorTrend": "down",
+        "priorTrendSlope": -0.1029,
+        "priorTrendReturn26": -0.2613,
+        "rangePosition52": 0.4704,
+        "priceDistance": 0.2693
+      }
+    },
+    {
+      "candidateId": "518880.SH-2021-06-04",
+      "symbol": "518880.SH",
+      "date": "2021-06-04",
+      "human": "stage_3",
+      "predicted": "stage_1",
+      "correct": false,
+      "margin": 28,
+      "scores": {
+        "1": 63,
+        "3": 35
+      },
+      "features": {
+        "normalizedSlope": -0.0694,
+        "previousSlope": -0.1375,
+        "consolidationScore": 56,
+        "priorTrend": "down",
+        "priorTrendSlope": -0.0743,
+        "priorTrendReturn26": -0.1434,
+        "rangePosition52": 0.2826,
+        "priceDistance": 0.1355
+      }
+    },
+    {
+      "candidateId": "510050.SH-2025-01-10",
+      "symbol": "510050.SH",
+      "date": "2025-01-10",
+      "human": "stage_1",
+      "predicted": "stage_3",
+      "correct": false,
+      "margin": 23,
+      "scores": {
+        "1": 43,
+        "3": 66
+      },
+      "features": {
+        "normalizedSlope": 0.0537,
+        "previousSlope": 0.0687,
+        "consolidationScore": 64,
+        "priorTrend": "up",
+        "priorTrendSlope": 0.034,
+        "priorTrendReturn26": 0.1698,
+        "rangePosition52": 0.4721,
+        "priceDistance": 0.4412
+      }
+    },
+    {
+      "candidateId": "512660.SH-2026-03-27",
+      "symbol": "512660.SH",
+      "date": "2026-03-27",
+      "human": "stage_1",
+      "predicted": "stage_3",
+      "correct": false,
+      "margin": 22,
+      "scores": {
+        "1": 35,
+        "3": 57
+      },
+      "features": {
+        "normalizedSlope": 0.0726,
+        "previousSlope": 0.1368,
+        "consolidationScore": 49,
+        "priorTrend": "up",
+        "priorTrendSlope": 0.0605,
+        "priorTrendReturn26": 0.2137,
+        "rangePosition52": 0.4935,
+        "priceDistance": -0.1633
+      }
+    },
+    {
+      "candidateId": "510500.SH-2022-09-09",
+      "symbol": "510500.SH",
+      "date": "2022-09-09",
+      "human": "stage_3",
+      "predicted": "stage_1",
+      "correct": false,
+      "margin": 21,
+      "scores": {
+        "1": 55,
+        "3": 34
+      },
+      "features": {
+        "normalizedSlope": -0.0648,
+        "previousSlope": -0.1251,
+        "consolidationScore": 48,
+        "priorTrend": "down",
+        "priorTrendSlope": -0.1549,
+        "priorTrendReturn26": -0.146,
+        "rangePosition52": 0.5012,
+        "priceDistance": 0.5848
+      }
+    },
+    {
+      "candidateId": "510500.SH-2023-06-02",
+      "symbol": "510500.SH",
+      "date": "2023-06-02",
+      "human": "stage_1",
+      "predicted": "stage_3",
+      "correct": false,
+      "margin": 6,
+      "scores": {
+        "1": 34,
+        "3": 40
+      },
+      "features": {
+        "normalizedSlope": 0.0597,
+        "previousSlope": 0.0307,
+        "consolidationScore": 52,
+        "priorTrend": "mixed",
+        "priorTrendSlope": 0.0319,
+        "priorTrendReturn26": 0.0025,
+        "rangePosition52": 0.612,
+        "priceDistance": -0.3409
+      }
+    }
+  ]
+}

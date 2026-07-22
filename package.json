@@ -1,0 +1,44 @@
+{
+  "name": "a-share-stage-analysis",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "tsc -b",
+    "data:sample": "tsx scripts/generate-sample-data.ts",
+    "data:update": "tsx scripts/update-data.ts",
+    "data:recompute": "tsx scripts/recompute-analysis.ts",
+    "model:validate": "tsx scripts/validate-model.ts",
+    "labels:build": "tsx scripts/build-label-candidates.ts",
+    "labels:evaluate": "tsx scripts/evaluate-stage13-labels.ts",
+    "labels:evaluate-v2": "tsx scripts/evaluate-structured-validation.ts"
+  },
+  "dependencies": {
+    "lightweight-charts": "5.2.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "eslint": "9.39.4",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.4.26",
+    "globals": "16.5.0",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "8.0.13",
+    "vitest": "4.0.18"
+  },
+  "type": "module"
+}

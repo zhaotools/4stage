@@ -1,0 +1,302 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-21T17:19:38.279Z",
+  "sourceGeneratedAt": "2026-07-21T17:08:51.559Z",
+  "labels": [
+    {
+      "candidateId": "510500.SH-2019-12-13",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:14:13.441Z"
+    },
+    {
+      "candidateId": "518880.SH-2020-11-20",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:14:29.442Z"
+    },
+    {
+      "candidateId": "518880.SH-2021-06-04",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:14:55.944Z"
+    },
+    {
+      "candidateId": "159915.SZ-2021-08-20",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:15:10.028Z"
+    },
+    {
+      "candidateId": "518880.SH-2021-10-22",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:15:32.777Z"
+    },
+    {
+      "candidateId": "518880.SH-2022-07-01",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:15:36.777Z"
+    },
+    {
+      "candidateId": "512660.SH-2022-08-26",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:15:39.544Z"
+    },
+    {
+      "candidateId": "510500.SH-2022-09-09",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:15:42.327Z"
+    },
+    {
+      "candidateId": "588000.SH-2022-11-11",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:15:47.644Z"
+    },
+    {
+      "candidateId": "510300.SH-2022-12-02",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:15:56.643Z"
+    },
+    {
+      "candidateId": "512660.SH-2023-04-21",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:01.094Z"
+    },
+    {
+      "candidateId": "159915.SZ-2023-04-28",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:16:03.976Z"
+    },
+    {
+      "candidateId": "510300.SH-2023-04-28",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:11.612Z"
+    },
+    {
+      "candidateId": "512100.SH-2023-05-12",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:21.794Z"
+    },
+    {
+      "candidateId": "588000.SH-2023-05-12",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:16:27.263Z"
+    },
+    {
+      "candidateId": "510500.SH-2023-06-02",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:16:29.377Z"
+    },
+    {
+      "candidateId": "588000.SH-2023-06-02",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:16:32.711Z"
+    },
+    {
+      "candidateId": "512880.SH-2023-06-16",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:37.078Z"
+    },
+    {
+      "candidateId": "510050.SH-2023-09-28",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:39.261Z"
+    },
+    {
+      "candidateId": "512010.SH-2023-12-01",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:16:46.593Z"
+    },
+    {
+      "candidateId": "510050.SH-2024-03-01",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:51.895Z"
+    },
+    {
+      "candidateId": "512880.SH-2024-03-01",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:16:58.961Z"
+    },
+    {
+      "candidateId": "510500.SH-2024-04-03",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:04.645Z"
+    },
+    {
+      "candidateId": "510300.SH-2024-04-19",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:12.777Z"
+    },
+    {
+      "candidateId": "512100.SH-2024-04-26",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:17:16.795Z"
+    },
+    {
+      "candidateId": "159915.SZ-2024-05-17",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:17:18.828Z"
+    },
+    {
+      "candidateId": "512660.SH-2024-05-17",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:17:20.995Z"
+    },
+    {
+      "candidateId": "512880.SH-2024-08-30",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:27.795Z"
+    },
+    {
+      "candidateId": "588000.SH-2024-09-27",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:17:33.811Z"
+    },
+    {
+      "candidateId": "512100.SH-2024-10-11",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:39.878Z"
+    },
+    {
+      "candidateId": "512010.SH-2024-11-01",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:44.161Z"
+    },
+    {
+      "candidateId": "512010.SH-2024-12-20",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:17:47.330Z"
+    },
+    {
+      "candidateId": "159915.SZ-2025-01-03",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:49.812Z"
+    },
+    {
+      "candidateId": "510300.SH-2025-01-03",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:17:55.378Z"
+    },
+    {
+      "candidateId": "510500.SH-2025-01-03",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:00.994Z"
+    },
+    {
+      "candidateId": "512100.SH-2025-01-03",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:04.662Z"
+    },
+    {
+      "candidateId": "512660.SH-2025-01-03",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:08.628Z"
+    },
+    {
+      "candidateId": "510050.SH-2025-01-10",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:18:12.194Z"
+    },
+    {
+      "candidateId": "512010.SH-2025-05-16",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:18:14.128Z"
+    },
+    {
+      "candidateId": "512880.SH-2025-05-16",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:15.944Z"
+    },
+    {
+      "candidateId": "159915.SZ-2025-05-23",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:17.262Z"
+    },
+    {
+      "candidateId": "510300.SH-2025-05-23",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:18.246Z"
+    },
+    {
+      "candidateId": "510500.SH-2025-05-23",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:19.078Z"
+    },
+    {
+      "candidateId": "512100.SH-2025-05-23",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:20.895Z"
+    },
+    {
+      "candidateId": "512660.SH-2025-05-23",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:23.729Z"
+    },
+    {
+      "candidateId": "588000.SH-2025-05-23",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:18:29.112Z"
+    },
+    {
+      "candidateId": "510050.SH-2025-05-30",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:32.311Z"
+    },
+    {
+      "candidateId": "159915.SZ-2025-06-27",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:34.529Z"
+    },
+    {
+      "candidateId": "512010.SH-2025-06-27",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:37.828Z"
+    },
+    {
+      "candidateId": "512880.SH-2025-10-17",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:39.262Z"
+    },
+    {
+      "candidateId": "512010.SH-2025-12-05",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:41.812Z"
+    },
+    {
+      "candidateId": "512660.SH-2026-03-27",
+      "label": "stage_1",
+      "labeledAt": "2026-07-21T17:18:46.912Z"
+    },
+    {
+      "candidateId": "510050.SH-2026-04-10",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:48.619Z"
+    },
+    {
+      "candidateId": "510300.SH-2026-04-10",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:18:52.413Z"
+    },
+    {
+      "candidateId": "512100.SH-2026-04-10",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:18:56.128Z"
+    },
+    {
+      "candidateId": "588000.SH-2026-04-10",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:18:58.611Z"
+    },
+    {
+      "candidateId": "518880.SH-2026-05-22",
+      "label": "stage_3",
+      "labeledAt": "2026-07-21T17:19:01.196Z"
+    },
+    {
+      "candidateId": "512880.SH-2026-07-10",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:19:03.345Z"
+    },
+    {
+      "candidateId": "510050.SH-2026-07-17",
+      "label": "uncertain",
+      "labeledAt": "2026-07-21T17:19:10.145Z"
+    }
+  ]
+}

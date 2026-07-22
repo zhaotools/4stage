@@ -1,0 +1,92 @@
+[
+  {
+    "symbol": "510050.SH",
+    "name": "上证50ETF",
+    "benchmark": "000016.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "510300.SH",
+    "name": "沪深300ETF",
+    "benchmark": "000300.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "510500.SH",
+    "name": "中证500ETF",
+    "benchmark": "000905.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "512100.SH",
+    "name": "中证1000ETF",
+    "benchmark": "000852.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "159915.SZ",
+    "name": "创业板ETF",
+    "benchmark": "399006.SZ",
+    "exchange": "SZSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "588000.SH",
+    "name": "科创50ETF",
+    "benchmark": "000688.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "512880.SH",
+    "name": "证券ETF",
+    "benchmark": "000300.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "512010.SH",
+    "name": "医药ETF",
+    "benchmark": "000300.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "512660.SH",
+    "name": "军工ETF",
+    "benchmark": "000300.SH",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  },
+  {
+    "symbol": "518880.SH",
+    "name": "黄金ETF",
+    "benchmark": "AU9999",
+    "exchange": "SSE",
+    "assetType": "etf",
+    "dataStatus": "live",
+    "dataSource": "eastmoney"
+  }
+]
