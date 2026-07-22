@@ -96,7 +96,7 @@ export default function App() {
           <span className="brand-mark">阶</span>
           <span><strong>四阶段趋势投资</strong><small>4 STAGE</small></span>
         </a>
-        <div className="status-pill"><span />完整周线 · 每周更新</div>
+        <div className="status-pill"><span />本周动态 · 每日更新</div>
       </header>
 
       <section className="dashboard compact-dashboard">
@@ -171,7 +171,7 @@ export default function App() {
               </article>
 
               <article className="snapshot-card">
-                <div><span>周收盘价</span><strong>{latestBar.close.toFixed(3)}</strong></div>
+                <div><span>本周最新价</span><strong>{latestBar.close.toFixed(3)}</strong></div>
                 <div><span>30周均线</span><strong>{latest.features.sma30?.toFixed(3) ?? "—"}</strong></div>
                 <div><span>均线斜率</span><strong>{latest.features.normalizedSlope?.toFixed(3) ?? "—"}</strong></div>
                 <div><span>52周位置</span><strong>{latest.features.rangePosition52 === null ? "—" : `${Math.round(latest.features.rangePosition52 * 100)}%`}</strong></div>
@@ -180,7 +180,7 @@ export default function App() {
           </div>
 
           <article className="panel chart-panel main-chart-panel">
-            <div className="panel-title"><div><h3>周线K线与阶段</h3></div><small>最近约18个月 · 30周均线</small></div>
+            <div className="panel-title"><div><h3>动态周线K线与阶段</h3></div><small>本周每日更新 · 30周均线</small></div>
             <PriceChart bars={analysis.bars} stages={analysis.stages} />
           </article>
 

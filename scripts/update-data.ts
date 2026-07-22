@@ -58,10 +58,17 @@ const isoDate = (value: unknown) => {
 async function loadAdjustedBars(asset: RuntimeAsset) {
   if (asset.dataSource === "yahoo") {
     const daily = await loadYahooDailyBars(asset.providerSymbol ?? asset.symbol, startDate, endDate);
-    return aggregateWeekly(daily, new Date(), { continuousMarket: asset.assetType === "crypto" });
+    return aggregateWeekly(daily, new Date(), {
+      continuousMarket: asset.assetType === "crypto",
+      includeIncompleteWeek: true,
+    });
   }
   if (provider === "eastmoney") {
-    return aggregateWeekly(await loadEastmoneyDailyBars(asset.symbol, startDate, endDate));
+    return aggregateWeekly(
+      await loadEastmoneyDailyBars(asset.symbol, startDate, endDate),
+      new Date(),
+      { includeIncompleteWeek: true },
+    );
   }
   if (!client) throw new Error("Tushare client is unavailable");
   if (asset.assetType === "index") {
@@ -70,14 +77,18 @@ async function loadAdjustedBars(asset: RuntimeAsset) {
       { ts_code: asset.symbol, start_date: startDate, end_date: endDate },
       ["ts_code", "trade_date", "open", "high", "low", "close", "vol"],
     );
-    return aggregateWeekly(prices.map((row) => ({
-      date: isoDate(row.trade_date),
-      open: numberValue(row.open),
-      high: numberValue(row.high),
-      low: numberValue(row.low),
-      close: numberValue(row.close),
-      volume: row.vol === null ? null : numberValue(row.vol),
-    })));
+    return aggregateWeekly(
+      prices.map((row) => ({
+        date: isoDate(row.trade_date),
+        open: numberValue(row.open),
+        high: numberValue(row.high),
+        low: numberValue(row.low),
+        close: numberValue(row.close),
+        volume: row.vol === null ? null : numberValue(row.vol),
+      })),
+      new Date(),
+      { includeIncompleteWeek: true },
+    );
   }
   const priceApi = asset.assetType === "stock" ? "daily" : "fund_daily";
   const factorApi = asset.assetType === "stock" ? "adj_factor" : "fund_adj";
@@ -115,7 +126,7 @@ async function loadAdjustedBars(asset: RuntimeAsset) {
       volume: row.vol === null ? null : numberValue(row.vol),
     };
   });
-  return aggregateWeekly(daily);
+  return aggregateWeekly(daily, new Date(), { includeIncompleteWeek: true });
 }
 
 async function currentHs300(): Promise<AssetSummary[]> {

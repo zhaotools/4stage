@@ -28,4 +28,15 @@ describe("daily to weekly aggregation", () => {
     expect(result).toHaveLength(1);
     expect(result[0].date).toBe("2026-07-13");
   });
+
+  it("keeps the current partial week for daily dynamic analysis", () => {
+    const result = aggregateWeekly(
+      [bar("2026-07-13", 10), bar("2026-07-20", 11), bar("2026-07-21", 12)],
+      new Date("2026-07-21T06:00:00Z"),
+      { includeIncompleteWeek: true },
+    );
+    expect(result).toHaveLength(2);
+    expect(result[1].date).toBe("2026-07-21");
+    expect(result[1].close).toBe(12);
+  });
 });

@@ -24,7 +24,7 @@ function currentChinaWeekKey(now: Date) {
 export function aggregateWeekly(
   dailyBars: DailyBar[],
   now = new Date(),
-  options: { continuousMarket?: boolean } = {},
+  options: { continuousMarket?: boolean; includeIncompleteWeek?: boolean } = {},
 ): WeeklyBar[] {
   const sorted = [...dailyBars].sort((a, b) => a.date.localeCompare(b.date));
   const groups = new Map<string, DailyBar[]>();
@@ -54,7 +54,11 @@ export function aggregateWeekly(
 
   const chinaNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const chinaDay = chinaNow.getUTCDay();
-  if ((options.continuousMarket || (chinaDay >= 1 && chinaDay <= 5)) && result.length > 0) {
+  if (
+    !options.includeIncompleteWeek
+    && (options.continuousMarket || (chinaDay >= 1 && chinaDay <= 5))
+    && result.length > 0
+  ) {
     const latest = result.at(-1)!;
     if (mondayKey(latest.date) === currentChinaWeekKey(now)) result.pop();
   }
