@@ -55,7 +55,7 @@ export function PriceChart({ bars, stages }: PriceChartProps) {
 
     const chart = createChart(container, {
       width: container.clientWidth,
-      height: 520,
+      height: container.clientHeight,
       layout: {
         background: { type: ColorType.Solid, color: "rgba(0,0,0,0)" },
         textColor: "#52615b",
@@ -119,7 +119,10 @@ export function PriceChart({ bars, stages }: PriceChartProps) {
     chart.timeScale().fitContent();
 
     const observer = new ResizeObserver(([entry]) => {
-      chart.applyOptions({ width: Math.floor(entry.contentRect.width) });
+      chart.applyOptions({
+        width: Math.floor(entry.contentRect.width),
+        height: Math.floor(entry.contentRect.height),
+      });
     });
     observer.observe(container);
 

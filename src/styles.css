@@ -260,21 +260,66 @@ footer { margin-top: 24px; padding: 16px 0 0; border-top: 1px solid rgba(23,35,3
   .compact-dashboard { padding-top: 14px; }
   .query-strip { grid-template-columns: 1fr; gap: 8px; padding: 13px; }
   .query-strip > label { display: none; }
-  .data-note { position: absolute; right: 24px; top: 83px; }
+  .data-note { position: static; justify-self: end; margin-top: -2px; }
   .asset-type-filter { width: 100%; }
   .common-etf-filter { min-width: 0; }
   .asset-heading { align-items: flex-start; }
+  .asset-heading h2 { font-size: 25px; overflow-wrap: anywhere; }
+  .asset-heading p { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; line-height: 1.5; }
+  .asset-heading p span { margin-left: 0; padding-left: 10px; }
   .overview-grid { margin-top: 16px; }
+  .stage-card {
+    min-height: 0;
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    overflow: visible;
+  }
+  .stage-summary-line { min-width: 0; white-space: normal; }
+  .stage-summary-line strong { font-size: 18px; }
+  .stage-summary-line b { margin-left: auto; flex: 0 0 auto; font-size: 19px; }
+  .match-summary-line {
+    width: 100%;
+    margin-left: 0;
+    padding: 8px 0 0;
+    border-left: 0;
+    border-top: 1px solid rgba(23,35,31,.1);
+  }
+  .match-summary-line strong { margin-left: auto; }
   .snapshot-card { grid-template-columns: 1fr 1fr; }
   .snapshot-card div:nth-child(2) { border-right: 0; }
   .snapshot-card div:nth-child(-n+2) { border-bottom: 1px solid rgba(23,35,31,.1); }
-  .panel { padding: 17px; overflow: hidden; }
-  .chart-shell { overflow-x: auto; }
-  .price-chart { min-width: 700px; }
+  .panel { padding: 16px; overflow: hidden; }
+  .main-chart-panel { padding: 16px 14px 14px; }
+  .panel-title { gap: 12px; margin-bottom: 14px; }
+  .panel-title h3 { font-size: 16px; }
+  .panel-title small { text-align: right; line-height: 1.4; }
+  .chart-shell { overflow: hidden; }
+  .price-chart { min-width: 0; }
   .chart-legend { justify-content: flex-start; flex-wrap: wrap; }
-  .stage-timeline { margin-right: 0; overflow-x: auto; }
+  .stage-timeline { min-height: 42px; margin-right: 0; gap: 2px; overflow: hidden; }
+  .stage-timeline-segment { min-width: 0; padding: 6px 2px; gap: 0; border-width: 2px; }
+  .stage-timeline-segment strong { font-size: 10px; }
+  .stage-timeline-segment span { display: none; }
   .professional-chart-wrap, .trading-chart { height: 440px; }
   .stage-zone-layer { right: 56px; }
+  .professional-legend { gap: 8px 12px; }
+  .professional-legend a { flex-basis: 100%; margin-left: 0; text-align: right; }
+}
+
+@media (max-width: 360px) {
+  .topbar { padding: 0 14px; }
+  .brand { gap: 9px; }
+  .brand strong { font-size: 15px; }
+  .dashboard { padding-right: 12px; padding-left: 12px; }
+  .stage-summary-line { gap: 5px; }
+  .stage-summary-line span { font-size: 11px; }
+  .stage-summary-line strong { font-size: 17px; }
+  .stage-summary-line b { font-size: 17px; }
+  .snapshot-card div { padding-right: 8px; padding-left: 8px; }
+  .snapshot-card strong { font-size: 19px; }
+  .professional-chart-wrap, .trading-chart { height: 400px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
