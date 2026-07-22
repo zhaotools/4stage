@@ -1,0 +1,5 @@
+[
+  { "symbol": "BTC-USD", "providerSymbol": "BTC-USD", "name": "比特币 BTC", "benchmark": "BTC-USD", "exchange": "CRYPTO", "category": "加密货币", "searchTerms": ["BTC", "Bitcoin", "比特币"] },
+  { "symbol": "ETH-USD", "providerSymbol": "ETH-USD", "name": "以太坊 ETH", "benchmark": "BTC-USD", "exchange": "CRYPTO", "category": "加密货币", "searchTerms": ["ETH", "Ethereum", "以太坊"] },
+  { "symbol": "HYPE-USD", "providerSymbol": "HYPE32196-USD", "name": "Hyperliquid HYPE", "benchmark": "BTC-USD", "exchange": "CRYPTO", "category": "加密货币", "searchTerms": ["HYPE", "Hyperliquid"], "minimumWeeklyBars": 26 }
+]

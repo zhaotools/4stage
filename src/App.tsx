@@ -122,6 +122,8 @@ export default function App() {
             <option value="etf">ETF</option>
             <option value="index">指数</option>
             <option value="stock">股票</option>
+            <option value="crypto">加密货币</option>
+            <option value="crypto_stock">加密股票</option>
           </select>
           <div className="asset-options compact-options">
             {matches.slice(0, 8).map((asset) => (

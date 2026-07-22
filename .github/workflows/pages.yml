@@ -32,13 +32,20 @@ jobs:
       # platform-specific optional dependencies in the ephemeral Linux runner.
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
-      - name: Generate live A-share data
+      - name: Generate live market data
         if: github.event_name != 'push'
         env:
           DATA_PROVIDER: eastmoney
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           INCLUDE_HS300: true
         run: pnpm data:update
+      - name: Export generated market data
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-market-data
+          path: public/data
+          retention-days: 3
       - name: Validate model stability
         run: pnpm model:validate
       - run: pnpm build

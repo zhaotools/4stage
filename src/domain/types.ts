@@ -68,8 +68,8 @@ export interface StagePoint {
 export interface AssetSummary {
   symbol: string;
   name: string;
-  assetType: "stock" | "etf" | "index";
-  exchange: "SSE" | "SZSE";
+  assetType: "stock" | "etf" | "index" | "crypto" | "crypto_stock";
+  exchange: "SSE" | "SZSE" | "CRYPTO" | "NASDAQ" | "NYSE";
   benchmark: string;
   category?: string;
   industry?: string;
@@ -77,7 +77,7 @@ export interface AssetSummary {
   listDate?: string;
   searchTerms?: string[];
   dataStatus: "sample" | "live";
-  dataSource?: "eastmoney" | "tushare" | "sample";
+  dataSource?: "eastmoney" | "tushare" | "yahoo" | "sample";
 }
 
 export interface AssetAnalysis extends AssetSummary {

@@ -6,13 +6,22 @@ import { aggregateWeekly, type DailyBar } from "../src/data/weekly";
 import { loadEastmoneyBoardConstituents, loadEastmoneyDailyBars } from "./eastmoney";
 import { TushareClient } from "./tushare";
 import { toPublishedAnalysis } from "./publish-analysis";
+import { loadYahooDailyBars } from "./yahoo";
 
 interface AssetConfig {
   symbol: string;
   name: string;
   benchmark: string;
-  exchange: "SSE" | "SZSE";
+  exchange: AssetSummary["exchange"];
   category?: string;
+  searchTerms?: string[];
+  providerSymbol?: string;
+  minimumWeeklyBars?: number;
+}
+
+interface RuntimeAsset extends AssetSummary {
+  providerSymbol?: string;
+  minimumWeeklyBars?: number;
 }
 
 const token = process.env.TUSHARE_TOKEN;
@@ -33,6 +42,12 @@ const etfs = JSON.parse(
 const indexes = JSON.parse(
   await readFile(join(process.cwd(), "config", "indexes.json"), "utf8"),
 ) as AssetConfig[];
+const crypto = JSON.parse(
+  await readFile(join(process.cwd(), "config", "crypto.json"), "utf8"),
+) as AssetConfig[];
+const cryptoStocks = JSON.parse(
+  await readFile(join(process.cwd(), "config", "crypto-stocks.json"), "utf8"),
+) as AssetConfig[];
 
 const numberValue = (value: unknown) => Number(value);
 const isoDate = (value: unknown) => {
@@ -40,15 +55,19 @@ const isoDate = (value: unknown) => {
   return `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`;
 };
 
-async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf" | "index") {
+async function loadAdjustedBars(asset: RuntimeAsset) {
+  if (asset.dataSource === "yahoo") {
+    const daily = await loadYahooDailyBars(asset.providerSymbol ?? asset.symbol, startDate, endDate);
+    return aggregateWeekly(daily, new Date(), { continuousMarket: asset.assetType === "crypto" });
+  }
   if (provider === "eastmoney") {
-    return aggregateWeekly(await loadEastmoneyDailyBars(symbol, startDate, endDate));
+    return aggregateWeekly(await loadEastmoneyDailyBars(asset.symbol, startDate, endDate));
   }
   if (!client) throw new Error("Tushare client is unavailable");
-  if (assetType === "index") {
+  if (asset.assetType === "index") {
     const prices = await client.query(
       "index_daily",
-      { ts_code: symbol, start_date: startDate, end_date: endDate },
+      { ts_code: asset.symbol, start_date: startDate, end_date: endDate },
       ["ts_code", "trade_date", "open", "high", "low", "close", "vol"],
     );
     return aggregateWeekly(prices.map((row) => ({
@@ -60,16 +79,16 @@ async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf" | "in
       volume: row.vol === null ? null : numberValue(row.vol),
     })));
   }
-  const priceApi = assetType === "stock" ? "daily" : "fund_daily";
-  const factorApi = assetType === "stock" ? "adj_factor" : "fund_adj";
+  const priceApi = asset.assetType === "stock" ? "daily" : "fund_daily";
+  const factorApi = asset.assetType === "stock" ? "adj_factor" : "fund_adj";
   const prices = await client.query(
     priceApi,
-    { ts_code: symbol, start_date: startDate, end_date: endDate },
+    { ts_code: asset.symbol, start_date: startDate, end_date: endDate },
     ["ts_code", "trade_date", "open", "high", "low", "close", "vol"],
   );
   const factors = await client.query(
     factorApi,
-    { ts_code: symbol, start_date: startDate, end_date: endDate },
+    { ts_code: asset.symbol, start_date: startDate, end_date: endDate },
     ["ts_code", "trade_date", "adj_factor"],
   );
   const factorByDate = new Map(
@@ -80,12 +99,12 @@ async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf" | "in
   ).at(-1);
   const latestFactor = latestFactorRow ? numberValue(latestFactorRow.adj_factor) : Number.NaN;
   if (!Number.isFinite(latestFactor) || latestFactor <= 0) {
-    throw new Error(`No valid adjustment factor for ${symbol}`);
+    throw new Error(`No valid adjustment factor for ${asset.symbol}`);
   }
 
   const daily: DailyBar[] = prices.map((row) => {
     const factor = factorByDate.get(String(row.trade_date));
-    if (!factor) throw new Error(`Missing adjustment factor for ${symbol} on ${row.trade_date}`);
+    if (!factor) throw new Error(`Missing adjustment factor for ${asset.symbol} on ${row.trade_date}`);
     const multiplier = factor / latestFactor;
     return {
       date: isoDate(row.trade_date),
@@ -161,7 +180,22 @@ async function currentHs300(): Promise<AssetSummary[]> {
 }
 
 await mkdir(outputDirectory, { recursive: true });
-const assets: AssetSummary[] = [
+const overseasAssets: RuntimeAsset[] = [
+  ...crypto.map((asset) => ({
+    ...asset,
+    assetType: "crypto" as const,
+    dataStatus: "live" as const,
+    dataSource: "yahoo" as const,
+  })),
+  ...cryptoStocks.map((asset) => ({
+    ...asset,
+    assetType: "crypto_stock" as const,
+    dataStatus: "live" as const,
+    dataSource: "yahoo" as const,
+  })),
+];
+const onlyOverseas = process.env.DATA_ONLY === "overseas";
+const domesticAssets: RuntimeAsset[] = onlyOverseas ? [] : [
   ...etfs.map((etf) => ({
     ...etf,
     assetType: "etf" as const,
@@ -176,6 +210,12 @@ const assets: AssetSummary[] = [
   })),
   ...(await currentHs300()),
 ];
+const assets: RuntimeAsset[] = [...domesticAssets, ...overseasAssets];
+
+function publishedSummary(asset: RuntimeAsset): AssetSummary {
+  const { providerSymbol: _providerSymbol, minimumWeeklyBars: _minimumWeeklyBars, ...summary } = asset;
+  return summary;
+}
 
 const successful: Array<AssetSummary | undefined> = new Array(assets.length);
 let nextAssetIndex = 0;
@@ -186,10 +226,13 @@ async function updateNextAsset() {
     const asset = assets[index];
   try {
     console.log(`[${index + 1}/${assets.length}] ${asset.symbol} ${asset.name}`);
-      const bars = await loadAdjustedBars(asset.symbol, asset.assetType);
-    if (bars.length < 60) throw new Error(`Insufficient weekly history: ${bars.length}`);
+      const bars = await loadAdjustedBars(asset);
+    if (bars.length < (asset.minimumWeeklyBars ?? 60)) {
+      throw new Error(`Insufficient weekly history: ${bars.length}`);
+    }
+    const summary = publishedSummary(asset);
     const analysis: AssetAnalysis = {
-      ...asset,
+      ...summary,
       generatedAt: new Date().toISOString(),
       bars,
       stages: analyzeStages(bars),
@@ -198,12 +241,12 @@ async function updateNextAsset() {
       join(outputDirectory, `${asset.symbol}.json`),
       JSON.stringify(toPublishedAnalysis(analysis)),
     );
-      successful[index] = asset;
+      successful[index] = summary;
   } catch (error) {
     console.error(`Skipped ${asset.symbol}:`, error);
       try {
         await readFile(join(outputDirectory, `${asset.symbol}.json`), "utf8");
-        successful[index] = asset;
+        successful[index] = publishedSummary(asset);
         console.warn(`Using cached analysis for ${asset.symbol}`);
       } catch {
         // Newly listed assets without enough history are intentionally omitted.
@@ -217,7 +260,23 @@ const concurrency = provider === "eastmoney"
   : 1;
 await Promise.all(Array.from({ length: concurrency }, () => updateNextAsset()));
 
-const completed = successful.filter((asset): asset is AssetSummary => asset !== undefined);
+const updated = successful.filter((asset): asset is AssetSummary => asset !== undefined);
+const missingOverseas = overseasAssets.filter(
+  (asset) => !updated.some((updatedAsset) => updatedAsset.symbol === asset.symbol),
+);
+if (missingOverseas.length > 0) {
+  throw new Error(`Missing required overseas assets: ${missingOverseas.map((asset) => asset.symbol).join(", ")}`);
+}
+let completed = updated;
+if (onlyOverseas) {
+  const cached = JSON.parse(
+    await readFile(join(outputDirectory, "assets.json"), "utf8"),
+  ) as AssetSummary[];
+  completed = [
+    ...cached.filter((asset) => asset.assetType !== "crypto" && asset.assetType !== "crypto_stock"),
+    ...updated,
+  ];
+}
 if (completed.length === 0) throw new Error("No asset data was generated");
 await writeFile(join(outputDirectory, "assets.json"), JSON.stringify(completed, null, 2));
-console.log(`Generated live analysis for ${completed.length}/${assets.length} assets via ${provider}`);
+console.log(`Generated live analysis for ${updated.length}/${assets.length} requested assets; ${completed.length} published`);
