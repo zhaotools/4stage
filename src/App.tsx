@@ -92,9 +92,9 @@ export default function App() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="./" aria-label="A股趋势阶段首页">
+        <a className="brand" href="./" aria-label="四阶段趋势投资首页">
           <span className="brand-mark">阶</span>
-          <span><strong>A股趋势阶段</strong><small>WEEKLY CYCLE</small></span>
+          <span><strong>四阶段趋势投资</strong><small>4 STAGE</small></span>
         </a>
         <div className="status-pill"><span />完整周线 · 每周更新</div>
       </header>
