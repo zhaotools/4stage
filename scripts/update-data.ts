@@ -102,16 +102,26 @@ async function loadAdjustedBars(symbol: string, assetType: "stock" | "etf" | "in
 async function currentHs300(): Promise<AssetSummary[]> {
   if (process.env.INCLUDE_HS300 === "false") return [];
   if (!client) {
-    const constituents = await loadEastmoneyBoardConstituents("BK0500");
-    return constituents.map((asset) => ({
-      ...asset,
-      assetType: "stock" as const,
-      benchmark: "000300.SH",
-      category: "沪深300",
-      indexMemberships: ["沪深300"],
-      dataStatus: "live" as const,
-      dataSource: provider,
-    }));
+    try {
+      const constituents = await loadEastmoneyBoardConstituents("BK0500");
+      return constituents.map((asset) => ({
+        ...asset,
+        assetType: "stock" as const,
+        benchmark: "000300.SH",
+        category: "沪深300",
+        indexMemberships: ["沪深300"],
+        dataStatus: "live" as const,
+        dataSource: provider,
+      }));
+    } catch (error) {
+      console.warn("Current HS300 list is unavailable; using the checked-in constituent snapshot", error);
+      const cached = JSON.parse(
+        await readFile(join(outputDirectory, "assets.json"), "utf8"),
+      ) as AssetSummary[];
+      const stocks = cached.filter((asset) => asset.assetType === "stock");
+      if (stocks.length < 250) throw error;
+      return stocks;
+    }
   }
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - 180);
@@ -191,6 +201,13 @@ async function updateNextAsset() {
       successful[index] = asset;
   } catch (error) {
     console.error(`Skipped ${asset.symbol}:`, error);
+      try {
+        await readFile(join(outputDirectory, `${asset.symbol}.json`), "utf8");
+        successful[index] = asset;
+        console.warn(`Using cached analysis for ${asset.symbol}`);
+      } catch {
+        // Newly listed assets without enough history are intentionally omitted.
+      }
   }
   }
 }

@@ -125,10 +125,23 @@ export async function loadEastmoneyBoardConstituents(
       fs: `b:${boardCode}`,
       fields: "f12,f14,f13",
     });
-    const response = await fetch(`${LIST_API_URL}?${params}`, {
-      headers: { "user-agent": "a-share-stage-analysis/0.1" },
-      signal: AbortSignal.timeout(30_000),
-    });
+    let response: Response | null = null;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        response = await fetch(`${LIST_API_URL}?${params}`, {
+          headers: { "user-agent": "a-share-stage-analysis/0.1" },
+          signal: AbortSignal.timeout(30_000),
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+      }
+    }
+    if (!response) {
+      throw new Error(`Eastmoney list request failed for ${boardCode}`, { cause: lastError });
+    }
     if (!response.ok) throw new Error(`Eastmoney list HTTP ${response.status}: ${boardCode}`);
     const payload = (await response.json()) as EastmoneyListResponse;
     if (payload.rc !== 0 || !payload.data) {
