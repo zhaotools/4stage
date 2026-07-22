@@ -28,7 +28,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # The checked-in lockfile is generated on macOS; allow pnpm to normalize
+      # platform-specific optional dependencies in the ephemeral Linux runner.
+      - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
       - name: Generate live ETF data
         env:
