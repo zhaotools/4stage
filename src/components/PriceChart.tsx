@@ -84,8 +84,8 @@ export function PriceChart({ bars, stages }: PriceChartProps) {
         minBarSpacing: 5,
         fixLeftEdge: true,
       },
-      handleScale: true,
-      handleScroll: true,
+      handleScale: false,
+      handleScroll: false,
     });
 
     const candles = chart.addSeries(CandlestickSeries, {

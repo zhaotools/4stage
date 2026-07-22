@@ -26,6 +26,8 @@ export function AnnotationChart({ bars, height = 390 }: { bars: WeeklyBar[]; hei
         vertLine: { color: "#65736d", width: 1, labelBackgroundColor: "#263c34" },
         horzLine: { color: "#65736d", width: 1, labelBackgroundColor: "#263c34" },
       },
+      handleScale: false,
+      handleScroll: false,
     });
     const candles = chart.addSeries(CandlestickSeries, {
       upColor: "#d5484f", downColor: "#15965e",
