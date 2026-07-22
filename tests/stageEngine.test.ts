@@ -88,4 +88,22 @@ describe("stage engine", () => {
     expect(features.priorTrend).toBe("mixed");
     expect(features.priorTrendQuality).toBeLessThan(0.75);
   });
+
+  it("marks a strong V-shaped recovery from Stage 4 before confirming Stage 2", () => {
+    const result = analyzeStages(series([
+      ...Array.from({ length: 90 }, () => -0.008),
+      ...Array.from({ length: 9 }, () => 0.055),
+      -0.025,
+      0.045,
+    ]));
+    const recovery = result.find((point) => point.state === "stage_4_to_2");
+    expect(recovery).toBeDefined();
+    expect(recovery?.stableStage).toBe(4);
+    expect(recovery?.candidateStage).toBe(2);
+    expect(recovery?.scores?.[2]).toBeGreaterThan(recovery?.scores?.[4] ?? 0);
+
+    const confirmedAdvance = result.find((point) => point.state === "stage_2");
+    expect(confirmedAdvance).toBeDefined();
+    expect(confirmedAdvance?.features.normalizedSlope).toBeGreaterThanOrEqual(0.015);
+  });
 });

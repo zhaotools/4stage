@@ -227,6 +227,26 @@ function scoreFeatures(features: StageFeatures): StageScores | null {
   };
 }
 
+function strongRecoveryScore(features: StageFeatures) {
+  const { normalizedSlope: slope, previousSlope, priceDistance, momentum13, breakdown26 } = features;
+  if (slope === null || previousSlope === null || priceDistance === null || momentum13 === null) return null;
+  const slopeImprovement = slope - previousSlope;
+  if (
+    priceDistance < 0.8 ||
+    momentum13 < 0.15 ||
+    slope < -0.065 ||
+    slopeImprovement < 0.025 ||
+    breakdown26
+  ) return null;
+
+  const strength =
+    0.35 * clamp((priceDistance - 0.5) / 1) +
+    0.3 * clamp((momentum13 - 0.1) / 0.2) +
+    0.2 * clamp((slopeImprovement - 0.02) / 0.06) +
+    0.15 * clamp((slope + 0.06) / 0.08);
+  return Math.max(66, Math.round(100 * strength));
+}
+
 const stageKey = (stage: CoreStage): StageState => `stage_${stage}` as StageState;
 
 const transitionState = (from: CoreStage, to: CoreStage): StageState => {
@@ -234,6 +254,7 @@ const transitionState = (from: CoreStage, to: CoreStage): StageState => {
   if (from === 2 && to === 3) return "stage_2_to_3";
   if (from === 3 && to === 4) return "stage_3_to_4";
   if (from === 4 && to === 1) return "stage_4_to_1";
+  if (from === 4 && to === 2) return "stage_4_to_2";
   return "unclear";
 };
 
@@ -298,6 +319,15 @@ function buildReasons(features: StageFeatures, stage: CoreStage | null): StageRe
   return reasons;
 }
 
+function buildRecoveryReasons(features: StageFeatures): StageReason[] {
+  const momentum = Math.round((features.momentum13 ?? 0) * 100);
+  return [
+    { tone: "positive", text: "价格显著站上30周均线" },
+    { tone: "positive", text: `13周价格动量为${momentum >= 0 ? "+" : ""}${momentum}%` },
+    { tone: "positive", text: "30周均线下降斜率正在快速收敛" },
+  ];
+}
+
 export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
   let stableStage: CoreStage | null = null;
   let pendingStage: CoreStage | null = null;
@@ -305,8 +335,8 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
 
   return bars.map((bar, index) => {
     const features = calculateFeatures(bars, index);
-    const scores = scoreFeatures(features);
-    if (scores === null) {
+    const baseScores = scoreFeatures(features);
+    if (baseScores === null) {
       return {
         date: bar.date,
         state: "insufficient_data",
@@ -319,6 +349,10 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       };
     }
 
+    const recoveryScore = stableStage === 4 ? strongRecoveryScore(features) : null;
+    const scores: StageScores = recoveryScore === null
+      ? baseScores
+      : { ...baseScores, 2: Math.max(baseScores[2], recoveryScore) };
     const ranked = rankScores(scores);
     const [best, second] = ranked;
     const decisive = best.score >= 54 && best.score - second.score >= 6;
@@ -337,10 +371,15 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       }
 
       const adjacent = isAdjacentTransition(stableStage, candidateStage);
-      const forceChange = best.score >= 82 && best.score - second.score >= 18;
-      state = adjacent ? transitionState(stableStage, candidateStage) : "unclear";
+      const directRecovery = stableStage === 4 && candidateStage === 2 && recoveryScore !== null;
+      const forceChange = !directRecovery && best.score >= 82 && best.score - second.score >= 18;
+      state = adjacent || directRecovery ? transitionState(stableStage, candidateStage) : "unclear";
 
-      if ((adjacent && pendingWeeks >= 2 && best.score >= 58) || forceChange) {
+      const recoveryConfirmed = directRecovery
+        && pendingWeeks >= 2
+        && (features.normalizedSlope ?? 0) >= 0.015
+        && best.score >= 66;
+      if ((adjacent && pendingWeeks >= 2 && best.score >= 58) || recoveryConfirmed || forceChange) {
         stableStage = candidateStage;
         pendingStage = null;
         pendingWeeks = 0;
@@ -366,7 +405,9 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       matchScore: candidateStage ? scores[candidateStage] : best.score,
       scores,
       features,
-      reasons: buildReasons(features, candidateStage ?? stableStage),
+      reasons: state === "stage_4_to_2"
+        ? buildRecoveryReasons(features)
+        : buildReasons(features, candidateStage ?? stableStage),
     };
   });
 }

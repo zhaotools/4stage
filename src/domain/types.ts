@@ -9,6 +9,7 @@ export type StageState =
   | "stage_3_to_4"
   | "stage_4"
   | "stage_4_to_1"
+  | "stage_4_to_2"
   | "unclear"
   | "insufficient_data";
 
