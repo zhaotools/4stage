@@ -37,6 +37,7 @@ jobs:
           DATA_PROVIDER: eastmoney
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           INCLUDE_HS300: true
+          DATA_ONLY: ${{ github.event_name == 'push' && 'overseas' || '' }}
         run: pnpm data:update
       - name: Export generated market data
         if: github.event_name == 'workflow_dispatch'
