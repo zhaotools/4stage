@@ -139,7 +139,18 @@ function resolveAsset(query) {
 
 function populateSelect(select, group, label) {
   const groupAssets = assets.filter((asset) => asset.group === group);
-  select.innerHTML = `<option value="">${label}（${groupAssets.length}）</option>${groupAssets.map((asset) => `<option value="${asset.symbol}">${asset.name} · ${asset.symbol}</option>`).join("")}`;
+  const sections = [];
+  groupAssets.forEach((asset) => {
+    const sectionName = asset.section || label;
+    let section = sections.find((item) => item.name === sectionName);
+    if (!section) {
+      section = { name: sectionName, assets: [] };
+      sections.push(section);
+    }
+    section.assets.push(asset);
+  });
+  const options = sections.map((section) => `<optgroup label="${section.name}">${section.assets.map((asset) => `<option value="${asset.symbol}">${asset.name} · ${asset.symbol}</option>`).join("")}</optgroup>`).join("");
+  select.innerHTML = `<option value="">${label}（${groupAssets.length}）</option>${options}`;
 }
 
 async function load(rawCode) {

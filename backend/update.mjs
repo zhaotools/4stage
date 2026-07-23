@@ -6,7 +6,23 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUTPUT_DIR = process.env.OUTPUT_DIR || join(ROOT, "data");
 const CACHE_DIR = process.env.CACHE_DIR || join(ROOT, "data");
 const SCOPE = process.env.DATA_SCOPE || "full";
-const configuredUniverse = JSON.parse(await readFile(join(ROOT, "config", "universe.json"), "utf8"));
+const baseUniverse = JSON.parse(await readFile(join(ROOT, "config", "universe.json"), "utf8"));
+const etfUniverse = JSON.parse(await readFile(join(ROOT, "config", "etf-universe.json"), "utf8"));
+const configuredEtfs = Object.entries(etfUniverse).flatMap(([group, entries]) => entries.map((asset, sortOrder) => ({
+  ...asset,
+  group,
+  sortOrder,
+  providerSymbol: asset.symbol,
+  provider: group === "a_etf" ? "eastmoney" : "yahoo",
+  exchange: group === "a_etf"
+    ? (asset.symbol.endsWith(".SH") ? "SSE" : "SZSE")
+    : "NYSEARCA",
+  assetType: "etf",
+})));
+const configuredUniverse = [
+  ...baseUniverse.filter((asset) => asset.group !== "a_etf" && asset.group !== "us_etf"),
+  ...configuredEtfs,
+];
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -331,10 +347,12 @@ async function buildAsset(asset) {
   const payload = {
     symbol: asset.symbol,
     providerSymbol: asset.providerSymbol || asset.symbol,
-    name: marketData.name || asset.name,
+    name: asset.name || marketData.name,
     group: asset.group,
     exchange: asset.exchange,
     category: asset.category,
+    section: asset.section,
+    sortOrder: asset.sortOrder,
     source: marketData.source,
     generatedAt: new Date().toISOString(),
     analysis,
@@ -351,6 +369,8 @@ async function buildAsset(asset) {
     group: asset.group,
     exchange: asset.exchange,
     category: asset.category,
+    section: asset.section,
+    sortOrder: asset.sortOrder,
     aliases: asset.aliases || [],
     searchTerms: asset.searchTerms || [],
     asOf: analysis.current.asOf,
@@ -386,19 +406,36 @@ const selected = SCOPE === "sample"
 await mkdir(OUTPUT_DIR, { recursive: true });
 const fastAssets = selected.filter((asset) => asset.provider !== "yahoo");
 const yahooAssets = selected.filter((asset) => asset.provider === "yahoo");
-const manifest = [
+const successfulAssets = [
   ...await mapConcurrent(fastAssets, 5, buildAsset),
   ...await mapConcurrent(yahooAssets, 2, buildAsset),
-].sort((a, b) => a.group.localeCompare(b.group) || a.symbol.localeCompare(b.symbol));
+];
+const successfulBySymbol = new Map(successfulAssets.map((asset) => [asset.symbol, asset]));
+const manifest = selected.map((asset) => successfulBySymbol.get(asset.symbol) || {
+  symbol: asset.symbol,
+  providerSymbol: asset.providerSymbol || asset.symbol,
+  name: asset.name,
+  group: asset.group,
+  exchange: asset.exchange,
+  category: asset.category,
+  section: asset.section,
+  sortOrder: asset.sortOrder,
+  aliases: asset.aliases || [],
+  searchTerms: asset.searchTerms || [],
+  available: false,
+}).sort((a, b) => a.group.localeCompare(b.group)
+  || (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER)
+  || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.3",
+  version: "V1.0.4",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
+  availableCount: successfulAssets.length,
   assets: manifest,
 };
 await writeFile(join(OUTPUT_DIR, "assets.json"), `${JSON.stringify(output, null, 2)}\n`);
 console.log(`Generated ${manifest.length}/${selected.length} assets in ${OUTPUT_DIR}`);
-if (SCOPE === "full" && manifest.length < 380) {
-  throw new Error(`Only ${manifest.length}/${selected.length} assets generated; deployment aborted to protect the live site.`);
+if (SCOPE === "full" && successfulAssets.length < 400) {
+  throw new Error(`Only ${successfulAssets.length}/${selected.length} assets generated; deployment aborted to protect the live site.`);
 }
