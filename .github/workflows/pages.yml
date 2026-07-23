@@ -33,6 +33,8 @@ jobs:
           path: .market-cache
           key: market-data-${{ github.run_id }}
           restore-keys: market-data-
+      - name: Run stage regression suite
+        run: node tests/stage-regression.mjs
       - name: Fetch market data and run stage analysis
         env:
           CACHE_DIR: .market-cache

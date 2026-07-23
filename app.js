@@ -71,6 +71,24 @@ function marketName(asset) {
 function render(asset, data) {
   const analysis = data.analysis;
   const stage = STAGES[analysis.current.stage - 1];
+  const transition = analysis.current.transition;
+  const fromStage = transition ? STAGES[transition.from - 1] : null;
+  const stageHeading = transition
+    ? `${fromStage.short}→${stage.short} <span>${transition.label}</span>`
+    : `${stage.short} <span>${stage.title}</span>`;
+  const stageCaption = transition
+    ? `阶段转换 · 完整周线截至 ${analysis.current.asOf}`
+    : `当前阶段 · 完整周线截至 ${analysis.current.asOf}`;
+  const stageSummary = transition?.type === "breakdown"
+    ? "价格显著跌破30周均线 · 等待后续完整周线确认"
+    : transition?.type === "recovery"
+      ? "价格显著站回30周均线 · 等待后续完整周线确认"
+      : transition
+        ? "阶段信号正在切换 · 等待后续完整周线确认"
+        : `${analysis.current.slope > 0.002 ? "均线向上" : analysis.current.slope < -0.002 ? "均线向下" : "均线趋平"} · 完整周线确认`;
+  const interpretation = transition
+    ? `系统已识别${fromStage.short}向${stage.short}的${transition.label}，当前先标记为转换状态，不把单次信号直接视为成熟的新阶段。后续完整周线将继续确认。`
+    : "后台仅使用已收盘的完整周线，依据价格与30周均线的位置、均线5周斜率、10/30周趋势关系、52周区间位置和量能变化统一计算。";
   const latest = analysis.bars.at(-1);
   const prior = analysis.bars.at(-2);
   const change = latest && prior ? latest.close / prior.close - 1 : 0;
@@ -82,9 +100,9 @@ function render(asset, data) {
         <h1>${asset.symbol}</h1>
         <p class="sub">${data.name} · ${data.source} · 后台分析</p>
         <div class="current-stage">
-          <small>当前阶段 · 截至 ${analysis.current.asOf}</small>
-          <h2 style="color:${stage.color}">${stage.short} <span>${stage.title}</span></h2>
-          <p>${analysis.current.slope > 0.002 ? "均线向上" : analysis.current.slope < -0.002 ? "均线向下" : "均线趋平"} · 周线确认</p>
+          <small>${stageCaption}</small>
+          <h2 class="${transition ? "is-transition" : ""}" style="color:${stage.color}">${stageHeading}</h2>
+          <p>${stageSummary}</p>
         </div>
         <div class="quote-box">
           <div><small>最新价格</small><b>${formatNumber(analysis.current.close)}</b></div>
@@ -94,7 +112,7 @@ function render(asset, data) {
         </div>
         <div class="interpretation">
           <b>ⓘ 当前状态解读</b>
-          <p>后台依据价格与30周均线的位置、均线5周斜率、10/30周趋势关系、52周区间位置和量能变化统一计算，浏览器仅负责显示结果。</p>
+          <p>${interpretation}</p>
         </div>
       </aside>
       <div class="analysis-area">
