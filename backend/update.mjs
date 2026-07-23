@@ -216,11 +216,6 @@ async function fetchAsset(asset) {
     if (asset.provider === "yahoo") return await fetchYahoo(asset);
     return await fetchEastmoney(asset);
   } catch (error) {
-    const cached = await readCache(asset);
-    if (cached) {
-      console.warn(`[cache] ${asset.symbol}: ${error.message}`);
-      return cached;
-    }
     if (asset.provider === "eastmoney") {
       const yahooSymbol = asset.symbol.endsWith(".SH")
         ? asset.symbol.replace(/\.SH$/, ".SS")
@@ -229,8 +224,13 @@ async function fetchAsset(asset) {
         console.warn(`[fallback] ${asset.symbol}: trying Yahoo Finance`);
         return await fetchYahoo({ ...asset, providerSymbol: yahooSymbol });
       } catch {
-        // Preserve the original market-source error below.
+        // Fall through to the last successful cache below.
       }
+    }
+    const cached = await readCache(asset);
+    if (cached) {
+      console.warn(`[cache] ${asset.symbol}: ${error.message}`);
+      return cached;
     }
     throw error;
   }
@@ -323,7 +323,7 @@ const manifest = selected.map((asset) => successfulBySymbol.get(asset.symbol) ||
   || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.9",
+  version: "V1.0.10",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
   availableCount: successfulAssets.length,
