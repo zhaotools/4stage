@@ -1,15 +1,54 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="覆盖A股、美股与加密资产的四阶段趋势识别工具" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="alternate icon" href="./favicon.ico" />
-    <title>四阶段趋势投资</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Weinstein 四阶段趋势分析工具">
+  <title>Weinstein 四阶段趋势分析</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./"><span>老赵市场工具箱</span><i></i><strong>四阶段趋势</strong></a>
+    <nav><a class="active" href="#">首页</a><a href="#method">方法论</a><a href="#guide">使用指南</a></nav>
+  </header>
+
+  <main class="shell">
+    <form class="search" id="searchForm">
+      <span>⌕</span>
+      <input id="symbolInput" aria-label="输入资产代码" value="BTCUSDT" placeholder="BTCUSDT / TSLA / 588000.SH">
+      <button id="searchButton" type="submit">分析阶段</button>
+    </form>
+    <p class="notice" id="notice" hidden></p>
+    <section id="result" class="loading-card">正在读取真实周线并计算四阶段…</section>
+
+    <section class="method-section" id="method">
+      <div class="section-title">
+        <small>THE METHOD</small>
+        <h2>四阶段，不是四个标签</h2>
+        <p>用价格与30周均线的关系、均线斜率和趋势结构，描述资产所处的中长期位置。</p>
+      </div>
+      <div class="method-grid">
+        <article style="--stage:#5b8def"><b>S1</b><h3>筑底阶段</h3><p>均线走平，价格围绕均线反复，关注底部结构是否完成。</p></article>
+        <article style="--stage:#22c78a"><b>S2</b><h3>上升阶段</h3><p>均线向上，价格运行在均线上方，趋势进入主要发展阶段。</p></article>
+        <article style="--stage:#f2b84b"><b>S3</b><h3>筑顶阶段</h3><p>涨势放缓，均线趋平，价格高位震荡并出现分歧。</p></article>
+        <article style="--stage:#ef6a6a"><b>S4</b><h3>下降阶段</h3><p>均线向下，价格运行在均线下方，风险释放仍在持续。</p></article>
+      </div>
+    </section>
+
+    <section class="guide-section" id="guide">
+      <div><small>使用指南</small><h2>一次查询，看清三个问题</h2></div>
+      <ol>
+        <li><b>01</b><span><strong>现在在哪？</strong>当前阶段与置信度</span></li>
+        <li><b>02</b><span><strong>为什么？</strong>均线位置、斜率与结构依据</span></li>
+        <li><b>03</b><span><strong>如何变化？</strong>K线上的历史阶段切换</span></li>
+      </ol>
+    </section>
+
+    <footer><b>老赵市场工具箱 · V1.0.0</b><span>免费数据可能存在延迟。分析结果仅供研究与交流，不构成投资建议。</span></footer>
+  </main>
+  <script src="./app.js"></script>
+</body>
 </html>

@@ -1,6 +1,0 @@
-[
-  { "symbol": "MSTR", "providerSymbol": "MSTR", "name": "Strategy MSTR", "benchmark": "BTC-USD", "exchange": "NASDAQ", "category": "加密股票", "searchTerms": ["MicroStrategy", "Strategy", "微策略"] },
-  { "symbol": "CRCL", "providerSymbol": "CRCL", "name": "Circle CRCL", "benchmark": "BTC-USD", "exchange": "NYSE", "category": "加密股票", "searchTerms": ["Circle", "USDC"], "minimumWeeklyBars": 26 },
-  { "symbol": "HOOD", "providerSymbol": "HOOD", "name": "Robinhood HOOD", "benchmark": "BTC-USD", "exchange": "NASDAQ", "category": "加密股票", "searchTerms": ["Robinhood", "罗宾汉"] },
-  { "symbol": "COIN", "providerSymbol": "COIN", "name": "Coinbase COIN", "benchmark": "BTC-USD", "exchange": "NASDAQ", "category": "加密股票", "searchTerms": ["Coinbase"] }
-]
