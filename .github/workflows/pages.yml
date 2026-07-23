@@ -40,7 +40,7 @@ jobs:
       - name: Assemble browser-only frontend
         run: |
           mkdir _site
-          cp index.html styles.css app.js favicon.svg .nojekyll README.md _site/
+          cp index.html styles.css app.js favicon.svg manifest.webmanifest app-icon-180.png app-icon-192.png app-icon-512.png .nojekyll README.md _site/
           cp -R data _site/data
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

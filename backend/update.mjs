@@ -392,7 +392,7 @@ const manifest = [
 ].sort((a, b) => a.group.localeCompare(b.group) || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.2",
+  version: "V1.0.3",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
   assets: manifest,
