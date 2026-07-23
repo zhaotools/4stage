@@ -1,6 +1,6 @@
-# Weinstein 四阶段趋势分析 V1.0.0
+# Weinstein 四阶段趋势分析 V1.0.1
 
-GitHub Pages 静态部署版，无需 Node.js、服务器或数据库。
+GitHub Pages 前端 + GitHub Actions 后台数据服务。浏览器不再直连第三方行情接口，也不在本地执行阶段分析。
 
 ## 部署
 
@@ -15,24 +15,31 @@ GitHub Pages 静态部署版，无需 Node.js、服务器或数据库。
 
 `https://你的用户名.github.io/4stage/`
 
-## 支持的代码格式
+## 资产范围
 
-- 加密：`BTCUSDT`、`ETHUSDT`
-- 美股：`TSLA`、`SPY`、`AAPL`
-- A股：`588000.SH`、`510300.SH`、`159915.SZ`
+- 加密蓝筹及相关股票：BTC、ETH、HYPE、MSTR、CRCL、HOOD、COIN
+- A股：常用 ETF、主要指数、沪深300成分股
+- 美股：主流高成交量个股与常用 ETF
+- 页面提供“加密蓝筹”“A股ETF”“美股ETF”三个快捷下拉框，全部资产也可通过代码或名称搜索。
 
 ## 数据说明
 
-- 加密资产使用 Binance 免费公开周线接口。
-- A 股使用东方财富免费历史行情接口。
-- 常用 A 股和ETF内置最近一次行情缓存，实时接口不可用时自动回退。
-- 美股使用 Yahoo Finance 免费历史行情接口。
-- GitHub Pages 是纯静态托管，行情请求直接从访问者浏览器发出。
-- 免费接口可能出现跨域限制、地区限制、延迟或短时不可用，不适合作为正式商业数据源。
+- GitHub Actions 每日运行 `backend/update.mjs`。
+- 后台从 Binance、东方财富和 Yahoo Finance 获取周线，统一完成四阶段分析并生成 JSON。
+- GitHub Pages 浏览器只读取仓库网站下的 `data/*.json` 结果并负责显示。
+- A股保留内置行情缓存，第三方接口短时异常时自动回退。
+- 免费接口可能存在延迟或短时不可用，不适合作为正式商业数据源。
 
 ## 文件
 
 - `index.html`：页面结构
 - `styles.css`：深色交易终端 UI
-- `app.js`：行情请求、四阶段算法和 K 线绘制
+- `app.js`：读取后台结果和 K 线绘制
+- `backend/update.mjs`：后台行情获取与阶段分析
+- `config/universe.json`：资产清单和分类
+- `.github/workflows/pages.yml`：每日后台更新与网站发布
 - `.nojekyll`：避免 GitHub Pages 的 Jekyll 处理
+
+## 版本规则
+
+网站底部显示当前版本。每次完成修改并上传，补丁版本号递增一次：V1.0.1、V1.0.2……

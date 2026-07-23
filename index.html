@@ -16,11 +16,19 @@
   </header>
 
   <main class="shell">
-    <form class="search" id="searchForm">
-      <span>⌕</span>
-      <input id="symbolInput" aria-label="输入资产代码" value="BTCUSDT" placeholder="BTCUSDT / TSLA / 588000.SH">
-      <button id="searchButton" type="submit">分析阶段</button>
-    </form>
+    <section class="query-panel" aria-label="资产查询">
+      <form class="search" id="searchForm">
+        <span>⌕</span>
+        <input id="symbolInput" list="assetOptions" aria-label="输入资产代码" value="BTC" placeholder="代码、名称或简称">
+        <datalist id="assetOptions"></datalist>
+        <button id="searchButton" type="submit">分析阶段</button>
+      </form>
+      <div class="quick-selects">
+        <label><span>加密蓝筹</span><select id="cryptoSelect" aria-label="选择加密蓝筹"><option>正在载入…</option></select></label>
+        <label><span>A股ETF</span><select id="aEtfSelect" aria-label="选择A股ETF"><option>正在载入…</option></select></label>
+        <label><span>美股ETF</span><select id="usEtfSelect" aria-label="选择美股ETF"><option>正在载入…</option></select></label>
+      </div>
+    </section>
     <p class="notice" id="notice" hidden></p>
     <section id="result" class="loading-card">正在读取真实周线并计算四阶段…</section>
 
@@ -47,7 +55,7 @@
       </ol>
     </section>
 
-    <footer><b>老赵市场工具箱 · V1.0.0</b><span>免费数据可能存在延迟。分析结果仅供研究与交流，不构成投资建议。</span></footer>
+    <footer><b>老赵市场工具箱 · V1.0.1</b><span>后台每日更新，免费数据可能存在延迟。分析结果仅供研究与交流，不构成投资建议。</span></footer>
   </main>
   <script src="./app.js"></script>
 </body>
