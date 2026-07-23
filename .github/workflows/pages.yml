@@ -39,6 +39,8 @@ jobs:
           INCLUDE_HS300: true
           DATA_ONLY: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[full-data]') && 'overseas' || '' }}
         run: pnpm data:update
+      - name: Recompute all cached stage histories
+        run: pnpm data:recompute
       - name: Export generated market data
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4

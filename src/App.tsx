@@ -153,10 +153,14 @@ export default function App() {
     : null;
   const latestBar = analysis?.bars.at(-1) ?? null;
   const meta = latest ? stageMeta[latest.state] : stageMeta.insufficient_data;
+  const currentMeta = latest?.stableStage ? coreStageMeta[latest.stableStage] : meta;
+  const nextMeta = latest?.nextStage ? coreStageMeta[latest.nextStage] : null;
   const scores = scoreEntries(latest?.scores ?? null);
-  const stageDisplay = meta.short.startsWith("S") ? meta.short.replace("S", "Stage ") : meta.short;
+  const stageDisplay = currentMeta.short.startsWith("S") ? currentMeta.short.replace("S", "Stage ") : currentMeta.short;
+  const transitionChecks = latest?.transitionChecks ?? [];
+  const passedTransitionChecks = transitionChecks.filter((check) => check.passed).length;
   const statusInterpretation = latest && analysis
-    ? buildStatusInterpretation(latest, analysis.name, stageDisplay, meta.title)
+    ? buildStatusInterpretation(latest, analysis.name, stageDisplay, currentMeta.title)
     : null;
 
   return (
@@ -251,15 +255,17 @@ export default function App() {
               <p>{analysis.symbol} · {analysis.exchange}<span>数据截至 {latest.date}</span></p>
             </div>
             <div className="overview-grid result-overview">
-              <article className="stage-card" style={{ "--stage-color": meta.color } as React.CSSProperties}>
+              <article className="stage-card" style={{ "--stage-color": currentMeta.color, "--next-stage-color": nextMeta?.color ?? currentMeta.color } as React.CSSProperties}>
                 <div className="stage-summary-line">
                   <span>当前阶段：</span>
-                  <strong>{meta.title}</strong>
+                  <strong>{currentMeta.title}</strong>
                   <b>{stageDisplay}</b>
                 </div>
-                <div className="stage-summary-line match-summary-line">
-                  <span>规则匹配度</span>
-                  <strong>{latest.matchScore ?? "—"}/100</strong>
+                <div className="stage-summary-line next-stage-summary-line">
+                  <span>下一阶段：</span>
+                  <strong>{nextMeta?.title ?? "等待数据"}</strong>
+                  {latest.nextStage && <b>Stage {latest.nextStage}</b>}
+                  <em>条件 {passedTransitionChecks}/{transitionChecks.length || "—"}</em>
                 </div>
               </article>
 
@@ -287,13 +293,28 @@ export default function App() {
                     <p><strong>{item.label}</strong><span>{item.text}</span></p>
                   </div>
                 ))}
-                <div className="status-conclusion" style={{ "--stage-color": meta.color } as React.CSSProperties}>
+                <div className="status-conclusion" style={{ "--stage-color": currentMeta.color } as React.CSSProperties}>
                   <strong>结论</strong><p>{statusInterpretation.conclusion}</p>
                 </div>
+                {nextMeta && transitionChecks.length > 0 && <div className="transition-checklist" style={{ "--next-stage-color": nextMeta.color } as React.CSSProperties}>
+                  <div className="transition-checklist-heading">
+                    <span>进入 Stage {latest.nextStage} · {nextMeta.title}</span>
+                    <strong>{passedTransitionChecks}/{transitionChecks.length}</strong>
+                  </div>
+                  <div className="transition-progress"><i style={{ width: `${latest.transitionProgress ?? 0}%` }} /></div>
+                  <ul>
+                    {transitionChecks.map((check) => (
+                      <li key={check.key} className={check.passed ? "passed" : "pending"}>
+                        <i>{check.passed ? "✓" : "×"}</i>
+                        <p><strong>{check.label}</strong><span>{check.detail}</span></p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>}
               </div>}
             </article>
             <article className="panel">
-              <div className="panel-title"><div><span>STAGE SCORES</span><h3>四阶段匹配</h3></div></div>
+              <div className="panel-title score-panel-title"><div><span>REFERENCE SCORES</span><h3>四阶段参考评分</h3></div><small>仅用于解释，不触发跳级</small></div>
               <div className="score-list">
                 {scores.map(({ stage, score }) => (
                   <div
@@ -313,7 +334,7 @@ export default function App() {
           <StageGuide />
 
           <footer>
-            规则匹配度不是未来涨跌概率，不构成投资建议。
+            阶段仅按 S1 → S2 → S3 → S4 → S1 顺序转换；参考评分不是未来涨跌概率，不构成投资建议。
           </footer>
           </>
         )}

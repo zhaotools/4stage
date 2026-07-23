@@ -22,27 +22,20 @@ const nextStage = (stage: CoreStage): CoreStage =>
   stage === 4 ? 1 : (stage + 1) as CoreStage;
 
 /**
- * Creates a presentation-only long-cycle series. Transition states remain part
- * of their confirmed source stage, while a new core stage must persist before
- * the historical background changes. The scoring engine remains untouched.
+ * Creates a presentation-only long-cycle series from the engine's confirmed
+ * states. Transition states remain part of their source stage; the chart adds
+ * no second confirmation delay of its own.
  */
 export function resolveLongCycleStages(
   points: StageHistoryPoint[],
-  confirmationWeeks = 5,
 ): Array<CoreStage | null> {
   let current: CoreStage | null = null;
-  let pending: CoreStage | null = null;
-  let pendingStart = -1;
-  let pendingWeeks = 0;
   const resolved: Array<CoreStage | null> = [];
 
-  points.forEach((point, index) => {
+  points.forEach((point) => {
     const observed = sourceStage[point.state] ?? null;
 
     if (observed === null) {
-      pending = null;
-      pendingStart = -1;
-      pendingWeeks = 0;
       resolved.push(current);
       return;
     }
@@ -54,39 +47,16 @@ export function resolveLongCycleStages(
     }
 
     if (observed === current) {
-      pending = null;
-      pendingStart = -1;
-      pendingWeeks = 0;
       resolved.push(current);
       return;
     }
 
     if (observed !== nextStage(current)) {
-      pending = null;
-      pendingStart = -1;
-      pendingWeeks = 0;
       resolved.push(current);
       return;
     }
-
-    if (pending === observed) {
-      pendingWeeks += 1;
-    } else {
-      pending = observed;
-      pendingStart = index;
-      pendingWeeks = 1;
-    }
+    current = observed;
     resolved.push(current);
-
-    if (pendingWeeks >= confirmationWeeks) {
-      for (let backfill = pendingStart; backfill <= index; backfill += 1) {
-        resolved[backfill] = observed;
-      }
-      current = observed;
-      pending = null;
-      pendingStart = -1;
-      pendingWeeks = 0;
-    }
   });
 
   return resolved;
@@ -94,9 +64,8 @@ export function resolveLongCycleStages(
 
 export function buildLongCycleSegments(
   points: StageHistoryPoint[],
-  confirmationWeeks = 5,
 ): LongCycleSegment[] {
-  return resolveLongCycleStages(points, confirmationWeeks).reduce<LongCycleSegment[]>(
+  return resolveLongCycleStages(points).reduce<LongCycleSegment[]>(
     (segments, stage, index) => {
       const previous = segments.at(-1);
       if (previous && previous.stage === stage) previous.end = index;

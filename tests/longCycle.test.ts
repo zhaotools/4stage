@@ -10,16 +10,16 @@ describe("long-cycle presentation", () => {
     const result = resolveLongCycleStages(points([
       "stage_4", "stage_4_to_1", "unclear", "stage_1", "stage_1", "stage_1", "stage_1",
     ]));
-    expect(result).toEqual([4, 4, 4, 4, 4, 4, 4]);
+    expect(result).toEqual([4, 4, 4, 1, 1, 1, 1]);
   });
 
-  it("changes the long cycle after five persistent core-stage weeks", () => {
+  it("changes the chart as soon as the engine confirms a new core stage", () => {
     const result = buildLongCycleSegments(points([
-      "stage_4", "stage_4_to_1", "stage_1", "stage_1", "stage_1", "stage_1", "stage_1", "stage_1",
+      "stage_4", "stage_4_to_1", "stage_1", "stage_1",
     ]));
     expect(result).toEqual([
       { start: 0, end: 1, stage: 4 },
-      { start: 2, end: 7, stage: 1 },
+      { start: 2, end: 3, stage: 1 },
     ]);
   });
 
@@ -27,11 +27,11 @@ describe("long-cycle presentation", () => {
     const result = buildLongCycleSegments(points([
       "stage_3",
       "stage_2", "stage_2", "stage_2", "stage_2", "stage_2", "stage_2",
-      "stage_4", "stage_4", "stage_4", "stage_4", "stage_4", "stage_4",
+      "stage_4", "stage_4",
     ]));
     expect(result).toEqual([
       { start: 0, end: 6, stage: 3 },
-      { start: 7, end: 12, stage: 4 },
+      { start: 7, end: 8, stage: 4 },
     ]);
   });
 });

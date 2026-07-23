@@ -8,6 +8,9 @@ function stage(date: string): StagePoint {
     state: "stage_1",
     stableStage: 1,
     candidateStage: 1,
+    nextStage: 2,
+    transitionProgress: 25,
+    transitionChecks: [{ key: "slope", label: "均线转升", detail: "测试", passed: true }],
     matchScore: 75,
     scores: { 1: 75, 2: 20, 3: 30, 4: 10 },
     features: {

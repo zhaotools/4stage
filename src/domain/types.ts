@@ -55,11 +55,21 @@ export interface StageReason {
   text: string;
 }
 
+export interface StageTransitionCheck {
+  key: string;
+  label: string;
+  detail: string;
+  passed: boolean;
+}
+
 export interface StagePoint {
   date: string;
   state: StageState;
   stableStage: CoreStage | null;
   candidateStage: CoreStage | null;
+  nextStage: CoreStage | null;
+  transitionProgress: number | null;
+  transitionChecks: StageTransitionCheck[];
   matchScore: number | null;
   scores: StageScores | null;
   features: StageFeatures;

@@ -5,6 +5,7 @@ import type {
   StageReason,
   StageScores,
   StageState,
+  StageTransitionCheck,
   WeeklyBar,
 } from "./types";
 
@@ -295,13 +296,232 @@ function buildReasons(features: StageFeatures, stage: CoreStage | null): StageRe
   return reasons;
 }
 
+interface TransitionEvaluation {
+  target: CoreStage;
+  checks: StageTransitionCheck[];
+  structuralReady: boolean;
+  confirmed: boolean;
+}
+
+const valueText = (value: number | null, digits = 2) =>
+  value === null ? "数据不足" : value.toFixed(digits);
+
+function structuralTransitionChecks(
+  from: CoreStage,
+  features: StageFeatures,
+): StageTransitionCheck[] {
+  const slope = features.normalizedSlope;
+  const distance = features.priceDistance;
+  const momentum = features.momentum13;
+  const consolidation = features.consolidationScore;
+  const range = features.rangePosition52;
+  const slopeImprovement = slope === null || features.previousSlope === null
+    ? null
+    : slope - features.previousSlope;
+
+  if (from === 1) {
+    return [
+      {
+        key: "above_ma30",
+        label: "有效站上30周均线",
+        detail: `当前距离 ${valueText(distance)} ATR，要求 ≥ 0.50 ATR`,
+        passed: distance !== null && distance >= 0.5,
+      },
+      {
+        key: "ma30_rising",
+        label: "30周均线转为上升",
+        detail: `当前斜率 ${valueText(slope, 3)}，要求 ≥ 0.020`,
+        passed: slope !== null && slope >= 0.02,
+      },
+      {
+        key: "upside_confirmation",
+        label: "向上突破得到确认",
+        detail: features.breakout26
+          ? "已突破过去26周高点"
+          : `13周动能 ${valueText(momentum === null ? null : momentum * 100, 1)}%，要求 ≥ 12%`,
+        passed: features.breakout26 || (momentum !== null && momentum >= 0.12),
+      },
+    ];
+  }
+
+  if (from === 2) {
+    return [
+      {
+        key: "ma30_flat",
+        label: "30周均线明显走平",
+        detail: `当前斜率 ${valueText(slope, 3)}，要求在 -0.045～0.045`,
+        passed: slope !== null && Math.abs(slope) <= 0.045,
+      },
+      {
+        key: "high_consolidation",
+        label: "形成高位横盘结构",
+        detail: `横盘成立度 ${consolidation ?? "—"}/100，要求 ≥ 55`,
+        passed: consolidation !== null && consolidation >= 55,
+      },
+      {
+        key: "upper_range",
+        label: "仍处于52周高位区域",
+        detail: `当前位置 ${range === null ? "—" : `${Math.round(range * 100)}%`}，要求 ≥ 60%`,
+        passed: range !== null && range >= 0.6,
+      },
+      {
+        key: "not_broken",
+        label: "尚未发生深度破位",
+        detail: `距离30周均线 ${valueText(distance)} ATR，要求 > -1.00 ATR`,
+        passed: distance !== null && distance > -1,
+      },
+    ];
+  }
+
+  if (from === 3) {
+    return [
+      {
+        key: "below_ma30",
+        label: "有效跌破30周均线",
+        detail: `当前距离 ${valueText(distance)} ATR，要求 ≤ -0.50 ATR`,
+        passed: distance !== null && distance <= -0.5,
+      },
+      {
+        key: "negative_momentum",
+        label: "中期动能转负",
+        detail: `13周动能 ${valueText(momentum === null ? null : momentum * 100, 1)}%，要求 ≤ -8%`,
+        passed: momentum !== null && momentum <= -0.08,
+      },
+      {
+        key: "downside_confirmation",
+        label: "下跌结构得到确认",
+        detail: features.breakdown26
+          ? "已跌破过去26周低点"
+          : `30周均线斜率 ${valueText(slope, 3)}，要求 ≤ 0.020`,
+        passed: features.breakdown26 || (slope !== null && slope <= 0.02),
+      },
+    ];
+  }
+
+  return [
+    {
+      key: "ma30_stabilizing",
+      label: "30周均线下降趋缓",
+      detail: `当前斜率 ${valueText(slope, 3)}，要求 ≥ -0.040`,
+      passed: slope !== null && slope >= -0.04,
+    },
+    {
+      key: "slope_improving",
+      label: "均线斜率持续改善",
+      detail: `较前值改善 ${valueText(slopeImprovement, 3)}，要求 ≥ 0.020`,
+      passed: slopeImprovement !== null && slopeImprovement >= 0.02,
+    },
+    {
+      key: "low_consolidation",
+      label: "形成低位横盘结构",
+      detail: `横盘成立度 ${consolidation ?? "—"}/100，要求 ≥ 50`,
+      passed: consolidation !== null && consolidation >= 50,
+    },
+    {
+      key: "no_new_low",
+      label: "价格停止创新低",
+      detail: features.breakdown26 ? "本周仍在跌破26周低点" : "本周未跌破26周低点",
+      passed: !features.breakdown26,
+    },
+  ];
+}
+
+function evaluateTransition(
+  from: CoreStage,
+  featureHistory: StageFeatures[],
+  consecutiveWeeks: number,
+): TransitionEvaluation {
+  const currentFeatures = featureHistory.at(-1) ?? emptyFeatures();
+  const structuralChecks = structuralTransitionChecks(from, currentFeatures);
+  const structuralReady = structuralChecks.every((check) => check.passed);
+  const target = nextStage(from);
+
+  if (from === 1 || from === 3 || from === 4) {
+    const requiredWeeks = 2;
+    const confirmationCheck: StageTransitionCheck = {
+      key: "consecutive_confirmation",
+      label: "连续周线确认",
+      detail: `已连续满足 ${Math.min(consecutiveWeeks, requiredWeeks)}/${requiredWeeks} 周`,
+      passed: consecutiveWeeks >= requiredWeeks,
+    };
+    return {
+      target,
+      structuralReady,
+      confirmed: structuralReady && confirmationCheck.passed,
+      checks: [...structuralChecks, confirmationCheck],
+    };
+  }
+
+  const recent = featureHistory.slice(-8);
+  const emergencyChecks: StageTransitionCheck[] = [
+    {
+      key: "sharp_ma30_break",
+      label: "价格快速跌破30周均线",
+      detail: `当前距离 ${valueText(currentFeatures.priceDistance)} ATR，要求 ≤ -0.50 ATR`,
+      passed: currentFeatures.priceDistance !== null && currentFeatures.priceDistance <= -0.5,
+    },
+    {
+      key: "sharp_momentum_loss",
+      label: "中期动能快速转弱",
+      detail: `13周动能 ${valueText(currentFeatures.momentum13 === null ? null : currentFeatures.momentum13 * 100, 1)}%，要求 ≤ -8%`,
+      passed: currentFeatures.momentum13 !== null && currentFeatures.momentum13 <= -0.08,
+    },
+  ];
+  const emergencyReady = emergencyChecks.every((check) => check.passed);
+  let emergencyWeeks = 0;
+  for (let index = featureHistory.length - 1; index >= 0; index -= 1) {
+    const features = featureHistory[index];
+    if (
+      features.priceDistance !== null && features.priceDistance <= -0.5
+      && features.momentum13 !== null && features.momentum13 <= -0.08
+    ) emergencyWeeks += 1;
+    else break;
+  }
+  if (emergencyReady) {
+    const confirmationCheck: StageTransitionCheck = {
+      key: "emergency_confirmation",
+      label: "快速破位连续确认",
+      detail: `已连续满足 ${Math.min(emergencyWeeks, 2)}/2 周`,
+      passed: emergencyWeeks >= 2,
+    };
+    return {
+      target,
+      structuralReady: true,
+      confirmed: confirmationCheck.passed,
+      checks: [...emergencyChecks, confirmationCheck],
+    };
+  }
+
+  const qualifyingWeeks = recent.filter((features) =>
+    structuralTransitionChecks(from, features).every((check) => check.passed),
+  ).length;
+  const confirmationCheck: StageTransitionCheck = {
+    key: "rolling_confirmation",
+    label: from === 2 ? "高位结构持续形成" : "底部结构持续形成",
+    detail: `最近${recent.length}周满足 ${qualifyingWeeks} 周，要求至少 5/8 周`,
+    passed: recent.length >= 8 && qualifyingWeeks >= 5,
+  };
+  return {
+    target,
+    structuralReady,
+    confirmed: confirmationCheck.passed,
+    checks: [...structuralChecks, confirmationCheck],
+  };
+}
+
+const transitionProgress = (checks: StageTransitionCheck[]) =>
+  checks.length === 0
+    ? null
+    : Math.round(100 * checks.filter((check) => check.passed).length / checks.length);
+
 export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
   let stableStage: CoreStage | null = null;
-  let pendingStage: CoreStage | null = null;
   let pendingWeeks = 0;
+  const featureHistory: StageFeatures[] = [];
 
   return bars.map((bar, index) => {
     const features = calculateFeatures(bars, index);
+    featureHistory.push(features);
     const baseScores = scoreFeatures(features);
     if (baseScores === null) {
       return {
@@ -309,6 +529,9 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
         state: "insufficient_data",
         stableStage: null,
         candidateStage: null,
+        nextStage: null,
+        transitionProgress: null,
+        transitionChecks: [],
         matchScore: null,
         scores: null,
         features,
@@ -326,41 +549,41 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       stableStage = rawCandidate;
     }
 
-    // The four-stage method is a cycle, not a free four-class classifier.
-    // Only the current stage or its single forward successor may participate in
-    // a transition. Reverse and skipped-stage scores remain visible as context,
-    // but cannot rewrite the long-term market regime.
-    const candidateStage = stableStage !== null && rawCandidate !== null
-      && (rawCandidate === stableStage || rawCandidate === nextStage(stableStage))
-      ? rawCandidate
-      : null;
+    if (stableStage === null) {
+      return {
+        date: bar.date,
+        state: "unclear",
+        stableStage: null,
+        candidateStage: null,
+        nextStage: null,
+        transitionProgress: null,
+        transitionChecks: [],
+        matchScore: best.score,
+        scores,
+        features,
+        reasons: [],
+      };
+    }
 
-    let state: StageState = stableStage ? stageKey(stableStage) : "unclear";
-    if (stableStage !== null && candidateStage !== null && candidateStage !== stableStage) {
-      if (pendingStage === candidateStage) pendingWeeks += 1;
-      else {
-        pendingStage = candidateStage;
-        pendingWeeks = 1;
-      }
-
-      state = transitionState(stableStage, candidateStage);
-
-      if (pendingWeeks >= 2 && scores[candidateStage] >= 58) {
-        stableStage = candidateStage;
-        pendingStage = null;
-        pendingWeeks = 0;
-        state = stageKey(stableStage);
-      }
-    } else if (candidateStage === stableStage) {
-      pendingStage = null;
+    let evaluation = evaluateTransition(stableStage, featureHistory, pendingWeeks);
+    if (stableStage === 1 || stableStage === 3 || stableStage === 4) {
+      pendingWeeks = evaluation.structuralReady ? pendingWeeks + 1 : 0;
+      evaluation = evaluateTransition(stableStage, featureHistory, pendingWeeks);
+    } else {
       pendingWeeks = 0;
-    } else if (candidateStage === null) {
-      // A weak or closely split weekly score is not evidence that the existing
-      // market regime ended. Preserve the last confirmed stage until a new,
-      // decisive candidate appears; matchScore still communicates uncertainty.
-      pendingStage = null;
+    }
+
+    let candidateStage: CoreStage | null = evaluation.structuralReady ? evaluation.target : null;
+    let state: StageState = evaluation.structuralReady
+      ? transitionState(stableStage, evaluation.target)
+      : stageKey(stableStage);
+
+    if (evaluation.confirmed) {
+      stableStage = evaluation.target;
       pendingWeeks = 0;
-      state = stableStage ? stageKey(stableStage) : "unclear";
+      candidateStage = null;
+      state = stageKey(stableStage);
+      evaluation = evaluateTransition(stableStage, featureHistory, 0);
     }
 
     return {
@@ -368,14 +591,13 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       state,
       stableStage,
       candidateStage,
-      matchScore: candidateStage
-        ? scores[candidateStage]
-        : stableStage
-          ? scores[stableStage]
-          : best.score,
+      nextStage: evaluation.target,
+      transitionProgress: transitionProgress(evaluation.checks),
+      transitionChecks: evaluation.checks,
+      matchScore: scores[stableStage],
       scores,
       features,
-      reasons: buildReasons(features, candidateStage ?? stableStage),
+      reasons: buildReasons(features, stableStage),
     };
   });
 }

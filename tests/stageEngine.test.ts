@@ -30,6 +30,16 @@ describe("stage engine", () => {
     expect(result.at(-1)?.stableStage).toBe(4);
   });
 
+  it("keeps Stage 2 through a normal pullback while the 30-week trend is still rising", () => {
+    const result = analyzeStages(series([
+      ...Array.from({ length: 80 }, () => 0.012),
+      ...Array.from({ length: 10 }, () => -0.01),
+    ]));
+
+    expect(result.at(-1)?.stableStage).toBe(2);
+    expect(result.at(-1)?.features.normalizedSlope).toBeGreaterThan(0.045);
+  });
+
   it("is causal and does not change an earlier result when future bars are appended", () => {
     const bars = series([
       ...Array.from({ length: 80 }, () => 0.01),
