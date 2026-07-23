@@ -8,6 +8,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { StageHistoryPoint, WeeklyBar } from "../domain/types";
+import { buildLongCycleSegments } from "../lib/longCycle";
 import { stageMeta } from "../lib/stageMeta";
 
 interface PriceChartProps {
@@ -15,13 +16,7 @@ interface PriceChartProps {
   stages: StageHistoryPoint[];
 }
 
-interface StageSegment {
-  start: number;
-  end: number;
-  state: StageHistoryPoint["state"];
-}
-
-const VISIBLE_WEEKS = 96;
+const VISIBLE_WEEKS = 208;
 
 function movingAverage(bars: WeeklyBar[], period: number) {
   return bars.flatMap((bar, index) => {
@@ -40,12 +35,7 @@ export function PriceChart({ bars, stages }: PriceChartProps) {
   const visibleStages = stages.slice(-VISIBLE_WEEKS);
 
   const segments = useMemo(
-    () => visibleStages.reduce<StageSegment[]>((result, point, index) => {
-      const previous = result.at(-1);
-      if (previous && previous.state === point.state) previous.end = index;
-      else result.push({ start: index, end: index, state: point.state });
-      return result;
-    }, []),
+    () => buildLongCycleSegments(visibleStages),
     [visibleStages],
   );
 
@@ -134,41 +124,35 @@ export function PriceChart({ bars, stages }: PriceChartProps) {
 
   return (
     <div className="financial-chart-shell">
-      <div className="stage-timeline" aria-label="历史阶段时间轴">
-        {segments.map((segment) => {
-          const meta = stageMeta[segment.state];
-          const weeks = segment.end - segment.start + 1;
-          return (
-            <div
-              key={`${segment.start}-${segment.state}`}
-              className="stage-timeline-segment"
-              style={{
-                "--zone-color": meta.color,
-                flexGrow: weeks,
-                flexBasis: 0,
-              } as React.CSSProperties}
-            >
-              <strong>{meta.short}</strong>
-              {weeks >= 7 && <span>{meta.title}</span>}
-            </div>
-          );
-        })}
-      </div>
-
       <div className="professional-chart-wrap">
         <div className="stage-zone-layer" aria-hidden="true">
           {segments.map((segment) => {
-            const meta = stageMeta[segment.state];
+            const meta = segment.stage === null ? null : stageMeta[`stage_${segment.stage}`];
             return (
               <div
-                key={`${segment.start}-${segment.state}`}
-                className="stage-zone"
+                key={`${segment.start}-${segment.stage ?? "unknown"}`}
+                className={`stage-zone${meta ? "" : " stage-zone-unknown"}`}
                 style={{
-                  "--zone-color": meta.color,
+                  "--zone-color": meta?.color ?? "#9aa39f",
                   flexGrow: segment.end - segment.start + 1,
                   flexBasis: 0,
                 } as React.CSSProperties}
               />
+            );
+          })}
+        </div>
+        <div className="stage-label-layer" aria-hidden="true">
+          {segments.map((segment) => {
+            const meta = segment.stage === null ? null : stageMeta[`stage_${segment.stage}`];
+            const weeks = segment.end - segment.start + 1;
+            return (
+              <div
+                key={`${segment.start}-${segment.stage ?? "unknown"}`}
+                className="stage-zone-label"
+                style={{ flexGrow: weeks, flexBasis: 0, "--zone-color": meta?.color ?? "#9aa39f" } as React.CSSProperties}
+              >
+                {meta && weeks >= 8 && <><strong>{meta.short}</strong>{weeks >= 16 && <span>{meta.title}</span>}</>}
+              </div>
             );
           })}
         </div>

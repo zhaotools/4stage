@@ -4,9 +4,9 @@ export const stageMeta: Record<
   StageState,
   { short: string; title: string; description: string; color: string }
 > = {
-  stage_1: { short: "S1", title: "底部构筑", description: "下跌趋缓，价格进入新的平衡区间", color: "#3378d4" },
+  stage_1: { short: "S1", title: "底部构筑", description: "下跌趋缓，价格进入新的平衡区间", color: "#2f9563" },
   stage_1_to_2: { short: "S1→2", title: "突破观察", description: "底部结构正在尝试向上突破", color: "#2d9a91" },
-  stage_2: { short: "S2", title: "趋势上升", description: "价格运行在上升的长期均线上方", color: "#15965e" },
+  stage_2: { short: "S2", title: "趋势上升", description: "价格运行在上升的长期均线上方", color: "#3378d4" },
   stage_2_to_3: { short: "S2→3", title: "趋势减速", description: "上升结构仍在，但趋势动能正在下降", color: "#a9a12a" },
   stage_3: { short: "S3", title: "高位震荡", description: "上升趋势失速，价格进入高位平衡", color: "#e08a28" },
   stage_3_to_4: { short: "S3→4", title: "破位观察", description: "高位结构受到破坏，等待周线确认", color: "#dd6245" },

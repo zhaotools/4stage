@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PriceChart } from "./components/PriceChart";
+import { StageGuide } from "./components/StageGuide";
 import type { AssetSummary, CoreStage, PublishedAssetAnalysis, StagePoint } from "./domain/types";
 import { stageMeta } from "./lib/stageMeta";
 import { normalizeAssetSearch } from "./lib/search";
@@ -40,6 +41,51 @@ function scoreEntries(scores: Record<CoreStage, number> | null) {
 
 function isFullStagePoint(point: PublishedAssetAnalysis["stages"][number]): point is StagePoint {
   return "features" in point && "reasons" in point && "scores" in point;
+}
+
+function buildStatusInterpretation(point: StagePoint, assetName: string, stageDisplay: string, stageTitle: string) {
+  const { features } = point;
+  const slope = features.normalizedSlope ?? 0;
+  const distance = features.priceDistance ?? 0;
+  const momentum = Math.round((features.momentum13 ?? 0) * 100);
+  const slopeText = Math.abs(slope) < 0.025 ? "趋于走平" : slope > 0 ? "保持上升" : "保持下降";
+  const priceText = distance >= 0 ? "价格位于30周均线上方" : "价格位于30周均线下方";
+  const confirmationText = features.breakout26
+    ? "已突破过去26周高点，长期结构得到向上确认"
+    : features.breakdown26
+      ? "已跌破过去26周低点，长期结构出现向下确认"
+      : "尚未突破或跌破过去26周关键区间，阶段仍需持续观察";
+
+  const transitionConclusions: Partial<Record<StagePoint["state"], string>> = {
+    stage_1_to_2: "底部结构正在尝试向上突破，站稳30周均线并延续强势后，才确认进入 Stage 2。",
+    stage_2_to_3: "上涨趋势仍在，但动能开始减弱，正在观察是否进入高位震荡。",
+    stage_3_to_4: "高位结构受到破坏，若弱势延续，将确认进入 Stage 4。",
+    stage_4_to_1: "下降速度正在放缓，正在寻找新的底部平衡区，但筑底尚未完成。",
+    stage_4_to_2: "价格出现强势修复，正在等待30周均线转升以确认新的上涨趋势。",
+    unclear: "多个阶段得分接近，目前没有足够证据确认新的长期阶段。",
+  };
+
+  return {
+    items: [
+      {
+        label: "长期结构",
+        text: `${priceText}，30周均线${slopeText}`,
+        tone: slope > 0.025 && distance >= 0 ? "positive" : slope < -0.025 && distance < 0 ? "warning" : "neutral",
+      },
+      {
+        label: "近期动能",
+        text: `过去13周价格动能为${momentum >= 0 ? "+" : ""}${momentum}%`,
+        tone: momentum >= 5 ? "positive" : momentum <= -5 ? "warning" : "neutral",
+      },
+      {
+        label: "关键确认",
+        text: confirmationText,
+        tone: features.breakout26 ? "positive" : features.breakdown26 ? "warning" : "neutral",
+      },
+    ],
+    conclusion: transitionConclusions[point.state]
+      ?? `${assetName} 当前更接近 ${stageDisplay} ${stageTitle}：${stageMeta[point.state].description}。`,
+  };
 }
 
 export default function App() {
@@ -109,6 +155,9 @@ export default function App() {
   const meta = latest ? stageMeta[latest.state] : stageMeta.insufficient_data;
   const scores = scoreEntries(latest?.scores ?? null);
   const stageDisplay = meta.short.startsWith("S") ? meta.short.replace("S", "Stage ") : meta.short;
+  const statusInterpretation = latest && analysis
+    ? buildStatusInterpretation(latest, analysis.name, stageDisplay, meta.title)
+    : null;
 
   return (
     <main>
@@ -224,18 +273,24 @@ export default function App() {
           </div>
 
           <article className="panel chart-panel main-chart-panel">
-            <div className="panel-title"><div><h3>动态周线K线与阶段</h3></div><small>本周每日更新 · 30周均线</small></div>
+            <div className="panel-title"><div><h3>周线K线与长周期阶段</h3></div><small>208周视图 · 阶段5周确认</small></div>
             <PriceChart bars={analysis.bars} stages={analysis.stages} />
           </article>
 
           <div className="details-grid">
             <article className="panel">
-              <div className="panel-title"><div><span>EVIDENCE</span><h3>判断依据</h3></div></div>
-              <ul className="reason-list">
-                {latest.reasons.map((reason) => (
-                  <li key={reason.text} className={reason.tone}><i />{reason.text}</li>
+              <div className="panel-title"><div><span>CURRENT STATUS</span><h3>当前状态解读</h3></div></div>
+              {statusInterpretation && <div className="status-interpretation">
+                {statusInterpretation.items.map((item) => (
+                  <div key={item.label} className={`status-reading ${item.tone}`}>
+                    <i>{item.label.slice(0, 1)}</i>
+                    <p><strong>{item.label}</strong><span>{item.text}</span></p>
+                  </div>
                 ))}
-              </ul>
+                <div className="status-conclusion" style={{ "--stage-color": meta.color } as React.CSSProperties}>
+                  <strong>结论</strong><p>{statusInterpretation.conclusion}</p>
+                </div>
+              </div>}
             </article>
             <article className="panel">
               <div className="panel-title"><div><span>STAGE SCORES</span><h3>四阶段匹配</h3></div></div>
@@ -254,6 +309,8 @@ export default function App() {
               </div>
             </article>
           </div>
+
+          <StageGuide />
 
           <footer>
             规则匹配度不是未来涨跌概率，不构成投资建议。
