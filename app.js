@@ -139,7 +139,22 @@ async function fetchYahoo(code) {
   throw new Error(`${lastError?.message || "行情暂时不可用"}。如持续出现，请查看 README 中的免费接口说明。`);
 }
 
-async function fetchChina(code) {
+async function fetchBundled(code) {
+  const response = await fetch(`./data/${encodeURIComponent(code)}.json`);
+  if (!response.ok) throw new Error("没有该资产的本地备用行情");
+  const payload = await response.json();
+  const bars = payload.bars.map((bar) => ({
+    time: bar.date,
+    open: Number(bar.open),
+    high: Number(bar.high),
+    low: Number(bar.low),
+    close: Number(bar.close),
+    volume: Number(bar.volume || 0),
+  }));
+  return { name: payload.name || code, source: "本地备用行情", bars };
+}
+
+async function fetchChinaLive(code) {
   const rawCode = code.replace(/\.(SH|SZ)$/, "");
   const market = code.endsWith(".SH") ? "1" : "0";
   const params = new URLSearchParams({
@@ -163,6 +178,14 @@ async function fetchChina(code) {
     return [{ time, open: values[0], high: values[1], low: values[2], close: values[3], volume: values[4] }];
   });
   return { name: data.name || code, source: "东方财富 · 前复权", bars };
+}
+
+async function fetchChina(code) {
+  try {
+    return await fetchChinaLive(code);
+  } catch {
+    return fetchBundled(code);
+  }
 }
 
 function formatNumber(value) {
