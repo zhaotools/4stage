@@ -337,6 +337,17 @@ async function fetchAsset(asset) {
       console.warn(`[cache] ${asset.symbol}: ${error.message}`);
       return cached;
     }
+    if (asset.provider === "eastmoney") {
+      const yahooSymbol = asset.symbol.endsWith(".SH")
+        ? asset.symbol.replace(/\.SH$/, ".SS")
+        : asset.symbol;
+      try {
+        console.warn(`[fallback] ${asset.symbol}: trying Yahoo Finance`);
+        return await fetchYahoo({ ...asset, providerSymbol: yahooSymbol });
+      } catch {
+        // Preserve the original market-source error below.
+      }
+    }
     throw error;
   }
 }
@@ -428,7 +439,7 @@ const manifest = selected.map((asset) => successfulBySymbol.get(asset.symbol) ||
   || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.4",
+  version: "V1.0.5",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
   availableCount: successfulAssets.length,
@@ -436,6 +447,12 @@ const output = {
 };
 await writeFile(join(OUTPUT_DIR, "assets.json"), `${JSON.stringify(output, null, 2)}\n`);
 console.log(`Generated ${manifest.length}/${selected.length} assets in ${OUTPUT_DIR}`);
+const missingRequiredEtfs = selected
+  .filter((asset) => asset.group === "a_etf" || asset.group === "us_etf")
+  .filter((asset) => !successfulBySymbol.has(asset.symbol));
+if (SCOPE === "full" && missingRequiredEtfs.length) {
+  throw new Error(`Required ETF data missing: ${missingRequiredEtfs.map((asset) => asset.symbol).join(", ")}`);
+}
 if (SCOPE === "full" && successfulAssets.length < 400) {
   throw new Error(`Only ${successfulAssets.length}/${selected.length} assets generated; deployment aborted to protect the live site.`);
 }
