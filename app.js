@@ -77,17 +77,17 @@ function render(asset, data) {
     ? `${fromStage.short}→${stage.short} <span>${transition.label}</span>`
     : `${stage.short} <span>${stage.title}</span>`;
   const stageCaption = transition
-    ? `阶段转换 · 完整周线截至 ${analysis.current.asOf}`
+    ? `阶段转换 · 确认 ${transition.confirmationWeeks}/${transition.requiredWeeks} 周 · 完整周线截至 ${analysis.current.asOf}`
     : `当前阶段 · 完整周线截至 ${analysis.current.asOf}`;
   const stageSummary = transition?.type === "breakdown"
-    ? "价格显著跌破30周均线 · 等待后续完整周线确认"
+    ? "价格显著跌破30周均线 · 连续完整周线确认中"
     : transition?.type === "recovery"
-      ? "价格显著站回30周均线 · 等待后续完整周线确认"
+      ? "价格显著站回30周均线 · 连续完整周线确认中"
       : transition
-        ? "阶段信号正在切换 · 等待后续完整周线确认"
+        ? "阶段信号正在切换 · 连续完整周线确认中"
         : `${analysis.current.slope > 0.002 ? "均线向上" : analysis.current.slope < -0.002 ? "均线向下" : "均线趋平"} · 完整周线确认`;
   const interpretation = transition
-    ? `系统已识别${fromStage.short}向${stage.short}的${transition.label}，当前先标记为转换状态，不把单次信号直接视为成熟的新阶段。后续完整周线将继续确认。`
+    ? `系统已识别${fromStage.short}向${stage.short}的${transition.label}，始于 ${transition.startedAt}。当前确认进度为 ${transition.confirmationWeeks}/${transition.requiredWeeks} 周；满足连续完整周线条件后才确认新阶段，信号失效则恢复原阶段。`
     : "后台仅使用已收盘的完整周线，依据价格与30周均线的位置、均线5周斜率、10/30周趋势关系、52周区间位置和量能变化统一计算。";
   const latest = analysis.bars.at(-1);
   const prior = analysis.bars.at(-2);

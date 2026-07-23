@@ -6,16 +6,16 @@ const NOW = "2026-07-23T22:37:00Z";
 const LAST_COMPLETE_WEEK = "2026-07-17";
 
 const cases = [
-  { symbol: "512100.SH", stage: 4, status: "transition", transition: [2, 4, "breakdown"] },
-  { symbol: "510500.SH", stage: 4, status: "transition", transition: [2, 4, "breakdown"] },
+  { symbol: "512100.SH", stage: 4, status: "transition", transition: [2, 4, "breakdown", 1, 2] },
+  { symbol: "510500.SH", stage: 4, status: "transition", transition: [2, 4, "breakdown", 0, 2] },
   { symbol: "510300.SH", stage: 2, status: "confirmed" },
   { symbol: "588000.SH", stage: 2, status: "confirmed" },
-  { symbol: "510880.SH", stage: 1, status: "confirmed" },
+  { symbol: "510880.SH", stage: 1, status: "transition", transition: [4, 1, "normal", 1, 2] },
   { symbol: "159915.SZ", stage: 2, status: "confirmed" },
-  { symbol: "000300.SH", stage: 3, status: "transition", transition: [2, 3, "normal"] },
+  { symbol: "000300.SH", stage: 3, status: "transition", transition: [2, 3, "normal", 1, 2] },
   { symbol: "000001.SH", stage: 3, status: "confirmed" },
   { symbol: "300750.SZ", stage: 3, status: "confirmed" },
-  { symbol: "600030.SH", stage: 3, status: "confirmed" },
+  { symbol: "600030.SH", stage: 3, status: "transition", transition: [2, 3, "normal", 1, 2] },
   { symbol: "601088.SH", stage: 1, status: "confirmed" },
   { symbol: "159611.SZ", stage: 1, status: "confirmed" },
   { symbol: "159819.SZ", stage: 2, status: "confirmed" },
@@ -48,7 +48,13 @@ for (const expected of cases) {
   if (expected.transition) {
     assert.ok(current.transition, `${expected.symbol}: 应存在阶段转换`);
     assert.deepEqual(
-      [current.transition.from, current.transition.to, current.transition.type],
+      [
+        current.transition.from,
+        current.transition.to,
+        current.transition.type,
+        current.transition.confirmationWeeks,
+        current.transition.requiredWeeks,
+      ],
       expected.transition,
       `${expected.symbol}: 阶段转换方向错误`,
     );
@@ -96,4 +102,44 @@ assert.deepEqual(
   "未完成周线不得改变当前阶段判断",
 );
 
-console.log(`Stage regression passed: ${cases.length} assets + incomplete-week guard`);
+const nextCompleteBreakdown = analyze(
+  [
+    ...incompleteWeekSource.bars,
+    {
+      date: "2026-07-24",
+      open: 2.9,
+      high: 2.94,
+      low: 2.75,
+      close: 2.8,
+      volume: 100000000,
+    },
+  ],
+  { symbol: "512100.SH", exchange: "SSE" },
+  { now: "2026-07-25T23:00:00Z" },
+);
+
+assert.equal(nextCompleteBreakdown.current.stage, 4, "连续破位周线应确认S4");
+assert.equal(nextCompleteBreakdown.current.status, "confirmed", "第二根有效完整周线后应结束转换状态");
+assert.equal(nextCompleteBreakdown.current.transition, null, "确认S4后不应继续显示待确认转换");
+
+const invalidatedBreakdown = analyze(
+  [
+    ...incompleteWeekSource.bars,
+    {
+      date: "2026-07-24",
+      open: 2.9,
+      high: 3.7,
+      low: 2.85,
+      close: 3.6,
+      volume: 100000000,
+    },
+  ],
+  { symbol: "512100.SH", exchange: "SSE" },
+  { now: "2026-07-25T23:00:00Z" },
+);
+
+assert.equal(invalidatedBreakdown.current.stage, 2, "重新站回MA30应取消S2到S4转换");
+assert.equal(invalidatedBreakdown.current.status, "confirmed", "转换失效后应恢复原确认阶段");
+assert.equal(invalidatedBreakdown.current.transition, null, "失效转换不应残留");
+
+console.log(`Stage regression passed: ${cases.length} assets + 3 transition guards`);

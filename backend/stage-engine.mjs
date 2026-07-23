@@ -102,13 +102,44 @@ function chooseStage(score, previous) {
 function transitionLabel(from, to, type) {
   if (type === "breakdown") return "破位转换";
   if (type === "recovery") return "修复转换";
-  return `${from}→${to}转换`;
+  return "阶段转换";
+}
+
+const REQUIRED_CONFIRMATION_WEEKS = 2;
+
+function transitionEvidence(type, candidate, target, distance, recentSlope) {
+  if (type === "breakdown") {
+    return distance < 0 && recentSlope !== null && recentSlope <= 0.001;
+  }
+  if (type === "recovery") {
+    return distance > 0 && recentSlope !== null && recentSlope >= -0.001;
+  }
+  return candidate === target;
+}
+
+function transitionInvalidated(type, candidate, target, distance) {
+  if (type === "breakdown") return distance >= 0;
+  if (type === "recovery") return distance <= 0;
+  return candidate !== target;
+}
+
+function transitionSnapshot(pending) {
+  return {
+    from: pending.from,
+    to: pending.to,
+    type: pending.type,
+    label: pending.label,
+    startedAt: pending.startedAt,
+    confirmationWeeks: pending.confirmationWeeks,
+    requiredWeeks: REQUIRED_CONFIRMATION_WEEKS,
+  };
 }
 
 export function analyze(inputBars, asset = {}, options = {}) {
   const now = options.now ? new Date(options.now) : new Date();
   const source = completedWeeklyBars(inputBars, asset, now);
-  let previous = null;
+  let confirmedStage = null;
+  let pending = null;
 
   const bars = source.map((bar, index) => {
     const ma10 = sma(source, index, 10);
@@ -123,24 +154,78 @@ export function analyze(inputBars, asset = {}, options = {}) {
     const recentSlope = priorMa30 ? ma30 / priorMa30 - 1 : null;
     const position = rangePosition(source, index, 52);
     const volume = volumeRatio(source, index);
-    const metrics = scoreStages(bar, ma10, ma30, slope, position, volume, previous);
-    let stage = chooseStage(metrics.score, previous);
+    const metrics = scoreStages(bar, ma10, ma30, slope, position, volume, confirmedStage);
+    let candidate = chooseStage(metrics.score, confirmedStage);
+    let forcedType = null;
+    let stage = candidate;
     let transition = null;
 
     const hardBreakdown = metrics.distance <= -0.05;
     const hardRecovery = metrics.distance >= 0.05;
 
-    if ((previous === 2 || stage === 2) && hardBreakdown) {
-      transition = { from: previous || 2, to: 4, type: "breakdown", label: transitionLabel(previous || 2, 4, "breakdown") };
-      stage = 4;
-    } else if ((previous === 4 || stage === 4) && hardRecovery) {
-      transition = { from: previous || 4, to: 2, type: "recovery", label: transitionLabel(previous || 4, 2, "recovery") };
-      stage = 2;
-    } else if (previous && stage !== previous) {
-      transition = { from: previous, to: stage, type: "normal", label: transitionLabel(previous, stage, "normal") };
+    if ((confirmedStage === 2 || candidate === 2) && hardBreakdown) {
+      candidate = 4;
+      forcedType = "breakdown";
+    } else if ((confirmedStage === 4 || candidate === 4) && hardRecovery) {
+      candidate = 2;
+      forcedType = "recovery";
     }
 
-    previous = stage;
+    if (confirmedStage === null) {
+      confirmedStage = candidate;
+      stage = confirmedStage;
+    } else if (pending) {
+      if (transitionInvalidated(pending.type, candidate, pending.to, metrics.distance)) {
+        pending = null;
+        if (candidate !== confirmedStage) {
+          const type = forcedType || "normal";
+          pending = {
+            from: confirmedStage,
+            to: candidate,
+            type,
+            label: transitionLabel(confirmedStage, candidate, type),
+            startedAt: bar.time,
+            confirmationWeeks: transitionEvidence(type, candidate, candidate, metrics.distance, recentSlope) ? 1 : 0,
+          };
+          stage = candidate;
+          transition = transitionSnapshot(pending);
+        } else {
+          stage = confirmedStage;
+        }
+      } else {
+        const hasEvidence = transitionEvidence(
+          pending.type,
+          candidate,
+          pending.to,
+          metrics.distance,
+          recentSlope,
+        );
+        pending.confirmationWeeks = hasEvidence ? pending.confirmationWeeks + 1 : 0;
+        if (pending.confirmationWeeks >= REQUIRED_CONFIRMATION_WEEKS) {
+          confirmedStage = pending.to;
+          pending = null;
+          stage = confirmedStage;
+        } else {
+          stage = pending.to;
+          transition = transitionSnapshot(pending);
+        }
+      }
+    } else if (candidate !== confirmedStage) {
+      const type = forcedType || "normal";
+      pending = {
+        from: confirmedStage,
+        to: candidate,
+        type,
+        label: transitionLabel(confirmedStage, candidate, type),
+        startedAt: bar.time,
+        confirmationWeeks: transitionEvidence(type, candidate, candidate, metrics.distance, recentSlope) ? 1 : 0,
+      };
+      stage = candidate;
+      transition = transitionSnapshot(pending);
+    } else {
+      stage = confirmedStage;
+    }
+
     return {
       ...bar,
       ma30,
