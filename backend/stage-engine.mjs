@@ -35,6 +35,32 @@ function normalizeBars(inputBars) {
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
+export function aggregateDailyToWeekly(inputBars) {
+  const daily = normalizeBars(inputBars);
+  const weeks = [];
+
+  daily.forEach((bar) => {
+    const date = new Date(`${bar.time}T00:00:00Z`);
+    const daysSinceMonday = (date.getUTCDay() + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - daysSinceMonday);
+    const weekKey = date.toISOString().slice(0, 10);
+    const current = weeks.at(-1);
+
+    if (!current || current.weekKey !== weekKey) {
+      weeks.push({ ...bar, weekKey });
+      return;
+    }
+
+    current.time = bar.time;
+    current.high = Math.max(current.high, bar.high);
+    current.low = Math.min(current.low, bar.low);
+    current.close = bar.close;
+    current.volume += bar.volume;
+  });
+
+  return weeks.map(({ weekKey, ...bar }) => bar);
+}
+
 function utcDay(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }

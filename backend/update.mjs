@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { analyze } from "./stage-engine.mjs";
+import { aggregateDailyToWeekly, analyze } from "./stage-engine.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUTPUT_DIR = process.env.OUTPUT_DIR || join(ROOT, "data");
@@ -76,7 +76,7 @@ async function fetchYahoo(asset) {
   for (const host of ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"]) {
     try {
       const symbol = encodeURIComponent(asset.providerSymbol || asset.symbol);
-      const payload = await requestJson(`${host}/v8/finance/chart/${symbol}?interval=1wk&range=10y&events=div%2Csplits`, 2);
+      const payload = await requestJson(`${host}/v8/finance/chart/${symbol}?interval=1d&range=10y&events=div%2Csplits`, 2);
       if (payload.chart?.error) throw new Error(payload.chart.error.description || "Yahoo Finance 返回错误");
       const data = payload.chart?.result?.[0];
       const quote = data?.indicators?.quote?.[0];
@@ -102,7 +102,7 @@ async function fetchYahoo(asset) {
       return {
         name: data.meta?.longName || data.meta?.shortName,
         source: "Yahoo Finance",
-        bars,
+        bars: aggregateDailyToWeekly(bars),
       };
     } catch (error) {
       lastError = error;
@@ -116,9 +116,9 @@ async function fetchEastmoney(asset) {
   const market = asset.symbol.endsWith(".SH") ? "1" : "0";
   const params = new URLSearchParams({
     secid: `${market}.${code}`,
-    klt: "102",
+    klt: "101",
     fqt: "1",
-    lmt: "520",
+    lmt: "1600",
     end: "20500101",
     fields1: "f1,f2,f3,f4,f5,f6",
     fields2: "f51,f52,f53,f54,f55,f56,f57,f61",
@@ -129,7 +129,7 @@ async function fetchEastmoney(asset) {
   return {
     name: data.name,
     source: "东方财富 · 前复权",
-    bars: data.klines.flatMap((line) => {
+    bars: aggregateDailyToWeekly(data.klines.flatMap((line) => {
       const [time, open, close, high, low, volume] = line.split(",");
       const values = [open, high, low, close, volume].map(Number);
       if (values.some((value) => !Number.isFinite(value))) return [];
@@ -141,7 +141,7 @@ async function fetchEastmoney(asset) {
         close: values[3],
         volume: values[4],
       }];
-    }),
+    })),
   };
 }
 
@@ -323,7 +323,7 @@ const manifest = selected.map((asset) => successfulBySymbol.get(asset.symbol) ||
   || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.8",
+  version: "V1.0.9",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
   availableCount: successfulAssets.length,

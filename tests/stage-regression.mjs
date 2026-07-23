@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { analyze } from "../backend/stage-engine.mjs";
+import { aggregateDailyToWeekly, analyze } from "../backend/stage-engine.mjs";
 
 const NOW = "2026-07-23T22:37:00Z";
 const LAST_COMPLETE_WEEK = "2026-07-17";
@@ -149,4 +149,21 @@ assert.equal(invalidatedBreakdown.current.stage, 2, "重新站回MA30应取消S2
 assert.equal(invalidatedBreakdown.current.status, "confirmed", "转换失效后应恢复原确认阶段");
 assert.equal(invalidatedBreakdown.current.transition, null, "失效转换不应残留");
 
-console.log(`Stage regression passed: ${cases.length} assets + 4 transition/data guards`);
+const aggregatedWeeks = aggregateDailyToWeekly([
+  { date: "2026-07-13", open: 10, high: 12, low: 9, close: 11, volume: 100 },
+  { date: "2026-07-14", open: 11, high: 13, low: 10, close: 12, volume: 120 },
+  { date: "2026-07-17", open: 12, high: 14, low: 8, close: 9, volume: 140 },
+  { date: "2026-07-20", open: 9, high: 10, low: 8, close: 9.5, volume: 160 },
+  { date: "2026-07-23", open: 9.5, high: 11, low: 9, close: 10.5, volume: 180 },
+]);
+
+assert.deepEqual(
+  aggregatedWeeks,
+  [
+    { time: "2026-07-17", open: 10, high: 14, low: 8, close: 9, volume: 360 },
+    { time: "2026-07-23", open: 9, high: 11, low: 8, close: 10.5, volume: 340 },
+  ],
+  "日线必须正确聚合为包含本周最新交易日的周K",
+);
+
+console.log(`Stage regression passed: ${cases.length} assets + 5 transition/data guards`);
