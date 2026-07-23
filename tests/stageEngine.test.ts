@@ -89,21 +89,23 @@ describe("stage engine", () => {
     expect(features.priorTrendQuality).toBeLessThan(0.75);
   });
 
-  it("marks a strong V-shaped recovery from Stage 4 before confirming Stage 2", () => {
+  it("does not skip directly from Stage 4 to Stage 2 during a V-shaped recovery", () => {
     const result = analyzeStages(series([
       ...Array.from({ length: 90 }, () => -0.008),
       ...Array.from({ length: 9 }, () => 0.055),
       -0.025,
       0.045,
     ]));
-    const recovery = result.find((point) => point.state === "stage_4_to_2");
-    expect(recovery).toBeDefined();
-    expect(recovery?.stableStage).toBe(4);
-    expect(recovery?.candidateStage).toBe(2);
-    expect(recovery?.scores?.[2]).toBeGreaterThan(recovery?.scores?.[4] ?? 0);
+    expect(result.some((point) => point.state === "stage_4_to_2")).toBe(false);
 
-    const confirmedAdvance = result.find((point) => point.state === "stage_2");
-    expect(confirmedAdvance).toBeDefined();
-    expect(confirmedAdvance?.features.normalizedSlope).toBeGreaterThanOrEqual(0.015);
+    const confirmed = result
+      .map((point) => point.stableStage)
+      .filter((stage): stage is 1 | 2 | 3 | 4 => stage !== null);
+    const changes = confirmed.filter((stage, index) => index === 0 || stage !== confirmed[index - 1]);
+    expect(changes.every((stage, index) => {
+      if (index === 0) return true;
+      const previous = changes[index - 1];
+      return stage === (previous === 4 ? 1 : previous + 1);
+    })).toBe(true);
   });
 });

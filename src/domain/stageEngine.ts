@@ -227,42 +227,18 @@ function scoreFeatures(features: StageFeatures): StageScores | null {
   };
 }
 
-function strongRecoveryScore(features: StageFeatures) {
-  const { normalizedSlope: slope, previousSlope, priceDistance, momentum13, breakdown26 } = features;
-  if (slope === null || previousSlope === null || priceDistance === null || momentum13 === null) return null;
-  const slopeImprovement = slope - previousSlope;
-  if (
-    priceDistance < 0.8 ||
-    momentum13 < 0.15 ||
-    slope < -0.065 ||
-    slopeImprovement < 0.025 ||
-    breakdown26
-  ) return null;
-
-  const strength =
-    0.35 * clamp((priceDistance - 0.5) / 1) +
-    0.3 * clamp((momentum13 - 0.1) / 0.2) +
-    0.2 * clamp((slopeImprovement - 0.02) / 0.06) +
-    0.15 * clamp((slope + 0.06) / 0.08);
-  return Math.max(66, Math.round(100 * strength));
-}
-
 const stageKey = (stage: CoreStage): StageState => `stage_${stage}` as StageState;
+
+const nextStage = (stage: CoreStage): CoreStage =>
+  stage === 4 ? 1 : (stage + 1) as CoreStage;
 
 const transitionState = (from: CoreStage, to: CoreStage): StageState => {
   if (from === 1 && to === 2) return "stage_1_to_2";
   if (from === 2 && to === 3) return "stage_2_to_3";
   if (from === 3 && to === 4) return "stage_3_to_4";
   if (from === 4 && to === 1) return "stage_4_to_1";
-  if (from === 4 && to === 2) return "stage_4_to_2";
   return "unclear";
 };
-
-const isAdjacentTransition = (from: CoreStage, to: CoreStage) =>
-  (from === 1 && to === 2) ||
-  (from === 2 && to === 3) ||
-  (from === 3 && to === 4) ||
-  (from === 4 && to === 1);
 
 function rankScores(scores: StageScores) {
   return (Object.entries(scores) as [string, number][])
@@ -319,15 +295,6 @@ function buildReasons(features: StageFeatures, stage: CoreStage | null): StageRe
   return reasons;
 }
 
-function buildRecoveryReasons(features: StageFeatures): StageReason[] {
-  const momentum = Math.round((features.momentum13 ?? 0) * 100);
-  return [
-    { tone: "positive", text: "价格显著站上30周均线" },
-    { tone: "positive", text: `13周价格动量为${momentum >= 0 ? "+" : ""}${momentum}%` },
-    { tone: "positive", text: "30周均线下降斜率正在快速收敛" },
-  ];
-}
-
 export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
   let stableStage: CoreStage | null = null;
   let pendingStage: CoreStage | null = null;
@@ -349,18 +316,24 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       };
     }
 
-    const recoveryScore = stableStage === 4 ? strongRecoveryScore(features) : null;
-    const scores: StageScores = recoveryScore === null
-      ? baseScores
-      : { ...baseScores, 2: Math.max(baseScores[2], recoveryScore) };
+    const scores: StageScores = baseScores;
     const ranked = rankScores(scores);
     const [best, second] = ranked;
     const decisive = best.score >= 54 && best.score - second.score >= 6;
-    const candidateStage = decisive ? best.stage : null;
+    const rawCandidate = decisive ? best.stage : null;
 
-    if (stableStage === null && candidateStage !== null) {
-      stableStage = candidateStage;
+    if (stableStage === null && rawCandidate !== null) {
+      stableStage = rawCandidate;
     }
+
+    // The four-stage method is a cycle, not a free four-class classifier.
+    // Only the current stage or its single forward successor may participate in
+    // a transition. Reverse and skipped-stage scores remain visible as context,
+    // but cannot rewrite the long-term market regime.
+    const candidateStage = stableStage !== null && rawCandidate !== null
+      && (rawCandidate === stableStage || rawCandidate === nextStage(stableStage))
+      ? rawCandidate
+      : null;
 
     let state: StageState = stableStage ? stageKey(stableStage) : "unclear";
     if (stableStage !== null && candidateStage !== null && candidateStage !== stableStage) {
@@ -370,16 +343,9 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
         pendingWeeks = 1;
       }
 
-      const adjacent = isAdjacentTransition(stableStage, candidateStage);
-      const directRecovery = stableStage === 4 && candidateStage === 2 && recoveryScore !== null;
-      const forceChange = !directRecovery && best.score >= 82 && best.score - second.score >= 18;
-      state = adjacent || directRecovery ? transitionState(stableStage, candidateStage) : "unclear";
+      state = transitionState(stableStage, candidateStage);
 
-      const recoveryConfirmed = directRecovery
-        && pendingWeeks >= 2
-        && (features.normalizedSlope ?? 0) >= 0.015
-        && best.score >= 66;
-      if ((adjacent && pendingWeeks >= 2 && best.score >= 58) || recoveryConfirmed || forceChange) {
+      if (pendingWeeks >= 2 && scores[candidateStage] >= 58) {
         stableStage = candidateStage;
         pendingStage = null;
         pendingWeeks = 0;
@@ -402,12 +368,14 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       state,
       stableStage,
       candidateStage,
-      matchScore: candidateStage ? scores[candidateStage] : best.score,
+      matchScore: candidateStage
+        ? scores[candidateStage]
+        : stableStage
+          ? scores[stableStage]
+          : best.score,
       scores,
       features,
-      reasons: state === "stage_4_to_2"
-        ? buildRecoveryReasons(features)
-        : buildReasons(features, candidateStage ?? stableStage),
+      reasons: buildReasons(features, candidateStage ?? stableStage),
     };
   });
 }

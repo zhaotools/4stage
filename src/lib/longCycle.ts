@@ -18,6 +18,9 @@ const sourceStage: Partial<Record<StageState, CoreStage>> = {
   stage_4_to_2: 4,
 };
 
+const nextStage = (stage: CoreStage): CoreStage =>
+  stage === 4 ? 1 : (stage + 1) as CoreStage;
+
 /**
  * Creates a presentation-only long-cycle series. Transition states remain part
  * of their confirmed source stage, while a new core stage must persist before
@@ -51,6 +54,14 @@ export function resolveLongCycleStages(
     }
 
     if (observed === current) {
+      pending = null;
+      pendingStart = -1;
+      pendingWeeks = 0;
+      resolved.push(current);
+      return;
+    }
+
+    if (observed !== nextStage(current)) {
       pending = null;
       pendingStart = -1;
       pendingWeeks = 0;

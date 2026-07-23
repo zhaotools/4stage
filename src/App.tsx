@@ -273,7 +273,7 @@ export default function App() {
           </div>
 
           <article className="panel chart-panel main-chart-panel">
-            <div className="panel-title"><div><h3>周线K线与长周期阶段</h3></div><small>208周视图 · 阶段5周确认</small></div>
+            <div className="panel-title"><div><h3>周线K线与长周期阶段</h3></div><small>208周视图 · S1→S2→S3→S4→S1</small></div>
             <PriceChart bars={analysis.bars} stages={analysis.stages} />
           </article>
 

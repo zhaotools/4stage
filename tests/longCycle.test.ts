@@ -22,4 +22,16 @@ describe("long-cycle presentation", () => {
       { start: 2, end: 7, stage: 1 },
     ]);
   });
+
+  it("ignores reverse and skipped stages in the historical display", () => {
+    const result = buildLongCycleSegments(points([
+      "stage_3",
+      "stage_2", "stage_2", "stage_2", "stage_2", "stage_2", "stage_2",
+      "stage_4", "stage_4", "stage_4", "stage_4", "stage_4", "stage_4",
+    ]));
+    expect(result).toEqual([
+      { start: 0, end: 6, stage: 3 },
+      { start: 7, end: 12, stage: 4 },
+    ]);
+  });
 });
