@@ -392,8 +392,8 @@ function structuralTransitionChecks(
         label: "下跌结构得到确认",
         detail: features.breakdown26
           ? "已跌破过去26周低点"
-          : `30周均线斜率 ${valueText(slope, 3)}，要求 ≤ 0.020`,
-        passed: features.breakdown26 || (slope !== null && slope <= 0.02),
+          : `30周均线斜率 ${valueText(slope, 3)}，要求 ≤ -0.020`,
+        passed: features.breakdown26 || (slope !== null && slope <= -0.02),
       },
     ];
   }
@@ -430,11 +430,60 @@ function evaluateTransition(
   from: CoreStage,
   featureHistory: StageFeatures[],
   consecutiveWeeks: number,
+  stageAdvance: number,
 ): TransitionEvaluation {
   const currentFeatures = featureHistory.at(-1) ?? emptyFeatures();
   const structuralChecks = structuralTransitionChecks(from, currentFeatures);
   const structuralReady = structuralChecks.every((check) => check.passed);
   const target = nextStage(from);
+
+  if (from === 4) {
+    const recoveryChecks: StageTransitionCheck[] = [
+      {
+        key: "recovery_above_ma30",
+        label: "价格强势站回30周均线",
+        detail: `当前距离 ${valueText(currentFeatures.priceDistance)} ATR，要求 ≥ 0.50 ATR`,
+        passed: currentFeatures.priceDistance !== null && currentFeatures.priceDistance >= 0.5,
+      },
+      {
+        key: "recovery_ma30_rising",
+        label: "30周均线重新上升",
+        detail: `当前斜率 ${valueText(currentFeatures.normalizedSlope, 3)}，要求 ≥ 0.040`,
+        passed: currentFeatures.normalizedSlope !== null && currentFeatures.normalizedSlope >= 0.04,
+      },
+      {
+        key: "recovery_momentum",
+        label: "中期上涨动能恢复",
+        detail: `13周动能 ${valueText(currentFeatures.momentum13 === null ? null : currentFeatures.momentum13 * 100, 1)}%，要求 ≥ 8%`,
+        passed: currentFeatures.momentum13 !== null && currentFeatures.momentum13 >= 0.08,
+      },
+    ];
+    const recoveryReady = recoveryChecks.every((check) => check.passed);
+    let recoveryWeeks = 0;
+    for (let index = featureHistory.length - 1; index >= 0; index -= 1) {
+      const features = featureHistory[index];
+      if (
+        features.priceDistance !== null && features.priceDistance >= 0.5
+        && features.normalizedSlope !== null && features.normalizedSlope >= 0.04
+        && features.momentum13 !== null && features.momentum13 >= 0.08
+      ) recoveryWeeks += 1;
+      else break;
+    }
+    if (recoveryReady) {
+      const confirmationCheck: StageTransitionCheck = {
+        key: "recovery_confirmation",
+        label: "强势修复连续确认",
+        detail: `已连续满足 ${Math.min(recoveryWeeks, 2)}/2 周`,
+        passed: recoveryWeeks >= 2,
+      };
+      return {
+        target,
+        structuralReady: true,
+        confirmed: confirmationCheck.passed,
+        checks: [...recoveryChecks, confirmationCheck],
+      };
+    }
+  }
 
   if (from === 1 || from === 3 || from === 4) {
     const requiredWeeks = 2;
@@ -466,6 +515,17 @@ function evaluateTransition(
       detail: `13周动能 ${valueText(currentFeatures.momentum13 === null ? null : currentFeatures.momentum13 * 100, 1)}%，要求 ≤ -8%`,
       passed: currentFeatures.momentum13 !== null && currentFeatures.momentum13 <= -0.08,
     },
+    {
+      key: "bearish_structure",
+      label: "成熟上涨或长期结构转弱",
+      detail: stageAdvance >= 0.25
+        ? `Stage 2 阶段内最高涨幅已达 ${valueText(stageAdvance * 100, 1)}%`
+        : currentFeatures.breakdown26
+          ? "已跌破过去26周低点"
+          : `阶段最高涨幅不足25%，且30周均线斜率 ${valueText(currentFeatures.normalizedSlope, 3)}，要求 ≤ -0.020`,
+      passed: stageAdvance >= 0.25 || currentFeatures.breakdown26
+        || (currentFeatures.normalizedSlope !== null && currentFeatures.normalizedSlope <= -0.02),
+    },
   ];
   const emergencyReady = emergencyChecks.every((check) => check.passed);
   let emergencyWeeks = 0;
@@ -474,6 +534,11 @@ function evaluateTransition(
     if (
       features.priceDistance !== null && features.priceDistance <= -0.5
       && features.momentum13 !== null && features.momentum13 <= -0.08
+      && (
+        stageAdvance >= 0.25
+        || features.breakdown26
+        || (features.normalizedSlope !== null && features.normalizedSlope <= -0.02)
+      )
     ) emergencyWeeks += 1;
     else break;
   }
@@ -495,6 +560,12 @@ function evaluateTransition(
   const qualifyingWeeks = recent.filter((features) =>
     structuralTransitionChecks(from, features).every((check) => check.passed),
   ).length;
+  const maturityCheck: StageTransitionCheck = {
+    key: "mature_advance",
+    label: "上涨阶段已充分展开",
+    detail: `Stage 2 阶段内最高涨幅 ${valueText(stageAdvance * 100, 1)}%，要求 ≥ 25%`,
+    passed: stageAdvance >= 0.25,
+  };
   const confirmationCheck: StageTransitionCheck = {
     key: "rolling_confirmation",
     label: from === 2 ? "高位结构持续形成" : "底部结构持续形成",
@@ -503,9 +574,9 @@ function evaluateTransition(
   };
   return {
     target,
-    structuralReady,
-    confirmed: confirmationCheck.passed,
-    checks: [...structuralChecks, confirmationCheck],
+    structuralReady: structuralReady && maturityCheck.passed,
+    confirmed: structuralReady && maturityCheck.passed && confirmationCheck.passed,
+    checks: [...structuralChecks, maturityCheck, confirmationCheck],
   };
 }
 
@@ -516,6 +587,8 @@ const transitionProgress = (checks: StageTransitionCheck[]) =>
 
 export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
   let stableStage: CoreStage | null = null;
+  let stableStageStartClose: number | null = null;
+  let stableStagePeakClose: number | null = null;
   let pendingWeeks = 0;
   const featureHistory: StageFeatures[] = [];
 
@@ -547,6 +620,8 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
 
     if (stableStage === null && rawCandidate !== null) {
       stableStage = rawCandidate;
+      stableStageStartClose = bar.close;
+      stableStagePeakClose = bar.close;
     }
 
     if (stableStage === null) {
@@ -565,10 +640,14 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
       };
     }
 
-    let evaluation = evaluateTransition(stableStage, featureHistory, pendingWeeks);
+    stableStagePeakClose = Math.max(stableStagePeakClose ?? bar.close, bar.close);
+    const stageAdvance = stableStageStartClose === null
+      ? 0
+      : stableStagePeakClose / stableStageStartClose - 1;
+    let evaluation = evaluateTransition(stableStage, featureHistory, pendingWeeks, stageAdvance);
     if (stableStage === 1 || stableStage === 3 || stableStage === 4) {
       pendingWeeks = evaluation.structuralReady ? pendingWeeks + 1 : 0;
-      evaluation = evaluateTransition(stableStage, featureHistory, pendingWeeks);
+      evaluation = evaluateTransition(stableStage, featureHistory, pendingWeeks, stageAdvance);
     } else {
       pendingWeeks = 0;
     }
@@ -580,10 +659,12 @@ export function analyzeStages(bars: WeeklyBar[]): StagePoint[] {
 
     if (evaluation.confirmed) {
       stableStage = evaluation.target;
+      stableStageStartClose = bar.close;
+      stableStagePeakClose = bar.close;
       pendingWeeks = 0;
       candidateStage = null;
       state = stageKey(stableStage);
-      evaluation = evaluateTransition(stableStage, featureHistory, 0);
+      evaluation = evaluateTransition(stableStage, featureHistory, 0, 0);
     }
 
     return {

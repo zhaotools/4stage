@@ -40,6 +40,25 @@ describe("stage engine", () => {
     expect(result.at(-1)?.features.normalizedSlope).toBeGreaterThan(0.045);
   });
 
+  it("requires a meaningful Stage 2 advance before confirming Stage 3", () => {
+    const shallowAdvance = analyzeStages(series([
+      ...Array.from({ length: 60 }, () => 0),
+      ...Array.from({ length: 7 }, () => 0.03),
+      ...Array.from({ length: 40 }, (_, index) => index % 2 === 0 ? 0.002 : -0.002),
+    ]));
+    const matureAdvance = analyzeStages(series([
+      ...Array.from({ length: 60 }, () => 0),
+      ...Array.from({ length: 10 }, () => 0.03),
+      ...Array.from({ length: 40 }, (_, index) => index % 2 === 0 ? 0.002 : -0.002),
+    ]));
+
+    expect(shallowAdvance.at(-1)?.stableStage).toBe(2);
+    expect(
+      shallowAdvance.at(-1)?.transitionChecks.find((check) => check.key === "mature_advance")?.passed,
+    ).toBe(false);
+    expect(matureAdvance.some((point) => point.stableStage === 3)).toBe(true);
+  });
+
   it("is causal and does not change an earlier result when future bars are appended", () => {
     const bars = series([
       ...Array.from({ length: 80 }, () => 0.01),
