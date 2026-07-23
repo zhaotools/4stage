@@ -192,7 +192,7 @@ async function readCache(asset) {
       if (!Array.isArray(bars) || bars.length < 35) continue;
       return {
         name: payload.name,
-        source: `${payload.source || "内置行情"} · 缓存`,
+        source: String(payload.source || "内置行情").replace(/(?:\s*·\s*缓存)+$/g, ""),
         bars,
       };
     } catch {
@@ -323,7 +323,7 @@ const manifest = selected.map((asset) => successfulBySymbol.get(asset.symbol) ||
   || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.7",
+  version: "V1.0.8",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
   availableCount: successfulAssets.length,

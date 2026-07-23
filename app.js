@@ -87,28 +87,30 @@ function render(asset, data) {
         ? "阶段信号正在切换 · 连续完整周线确认中"
         : `${analysis.current.slope > 0.002 ? "均线向上" : analysis.current.slope < -0.002 ? "均线向下" : "均线趋平"} · 完整周线确认`;
   const interpretation = transition
-    ? `系统已识别${fromStage.short}向${stage.short}的${transition.label}，始于 ${transition.startedAt}。当前确认进度为 ${transition.confirmationWeeks}/${transition.requiredWeeks} 周；满足连续完整周线条件后才确认新阶段，信号失效则恢复原阶段。`
-    : "后台仅使用已收盘的完整周线，依据价格与30周均线的位置、均线5周斜率、10/30周趋势关系、52周区间位置和量能变化统一计算。";
+    ? `系统已识别${fromStage.short}向${stage.short}的${transition.label}，始于 ${transition.startedAt}。当前确认进度为 ${transition.confirmationWeeks}/${transition.requiredWeeks} 周；满足连续完整周线条件后才确认新阶段，信号失效则恢复原阶段。K线行情更新至 ${analysis.current.latestAsOf}。`
+    : `阶段判断仅使用截至 ${analysis.current.asOf} 的已收盘完整周线；K线行情更新至 ${analysis.current.latestAsOf}，未完成周线只用于行情展示，不参与阶段确认。`;
   const latest = analysis.bars.at(-1);
   const prior = analysis.bars.at(-2);
   const change = latest && prior ? latest.close / prior.close - 1 : 0;
+  const latestClose = analysis.current.latestClose ?? latest?.close ?? analysis.current.close;
+  const latestDistance = analysis.current.latestDistance ?? analysis.current.distance;
   result.className = "";
   result.innerHTML = `
     <section class="workspace">
       <aside class="asset-report">
         <small>${marketName(asset)}</small>
         <h1>${asset.symbol}</h1>
-        <p class="sub">${data.name} · ${data.source} · 后台分析</p>
+        <p class="sub">${data.name}</p>
         <div class="current-stage">
           <small>${stageCaption}</small>
           <h2 class="${transition ? "is-transition" : ""}" style="color:${stage.color}">${stageHeading}</h2>
           <p>${stageSummary}</p>
         </div>
         <div class="quote-box">
-          <div><small>最新价格</small><b>${formatNumber(analysis.current.close)}</b></div>
-          <div><small>本周涨跌</small><b class="${change < 0 ? "down" : "positive"}">${change >= 0 ? "+" : ""}${(change * 100).toFixed(2)}%</b></div>
+          <div><small>最新价格</small><b>${formatNumber(latestClose)}</b></div>
+          <div><small>最新周涨跌</small><b class="${change < 0 ? "down" : "positive"}">${change >= 0 ? "+" : ""}${(change * 100).toFixed(2)}%</b></div>
           <div><small>阶段置信度</small><b>${analysis.current.confidence}%</b></div>
-          <div><small>距离30周均线</small><b class="${analysis.current.distance < 0 ? "down" : "positive"}">${analysis.current.distance >= 0 ? "+" : ""}${(analysis.current.distance * 100).toFixed(2)}%</b></div>
+          <div><small>最新距30周均线</small><b class="${latestDistance < 0 ? "down" : "positive"}">${latestDistance >= 0 ? "+" : ""}${(latestDistance * 100).toFixed(2)}%</b></div>
         </div>
         <div class="interpretation">
           <b>ⓘ 当前状态解读</b>
@@ -120,7 +122,10 @@ function render(asset, data) {
         <section class="chart-panel">
           <div class="panel-head">
             <div><small>BACKEND WEEKLY DATA</small><h3>历史阶段 · 周线</h3></div>
-            <div class="legend">K线　<span style="color:#72a8ff">—</span> 30周均线</div>
+            <div class="chart-meta">
+              <div class="legend">K线　<span style="color:#72a8ff">—</span> 30周均线</div>
+              <small>K线更新至 ${analysis.current.latestAsOf} · 阶段确认至 ${analysis.current.asOf}</small>
+            </div>
           </div>
           <div class="chart-wrap">${chartSvg(analysis, asset.symbol)}</div>
           <div class="axis"><span>${analysis.bars.at(-220)?.time.slice(0, 4) || ""}</span><span>历史阶段</span><span>当前</span></div>

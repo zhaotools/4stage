@@ -96,11 +96,18 @@ const withIncompleteWeek = analyze(
   { now: NOW },
 );
 
-assert.deepEqual(
-  withIncompleteWeek.current,
-  baseline.current,
-  "未完成周线不得改变当前阶段判断",
-);
+for (const key of ["stage", "status", "transition", "close", "ma30", "slope", "distance", "confidence", "asOf"]) {
+  assert.deepEqual(
+    withIncompleteWeek.current[key],
+    baseline.current[key],
+    `未完成周线不得改变阶段字段 current.${key}`,
+  );
+}
+assert.equal(withIncompleteWeek.current.latestAsOf, "2026-07-23", "K线应展示最新未完成周线");
+assert.equal(withIncompleteWeek.current.latestClose, 9.5, "最新价格应来自最新未完成周线");
+assert.equal(withIncompleteWeek.current.hasProvisionalBar, true, "应标记存在展示用未完成周线");
+assert.equal(withIncompleteWeek.bars.at(-1).provisional, true, "最新K线应标记为展示数据");
+assert.equal(withIncompleteWeek.bars.at(-1).time, "2026-07-23", "最新K线日期错误");
 
 const nextCompleteBreakdown = analyze(
   [
@@ -142,4 +149,4 @@ assert.equal(invalidatedBreakdown.current.stage, 2, "重新站回MA30应取消S2
 assert.equal(invalidatedBreakdown.current.status, "confirmed", "转换失效后应恢复原确认阶段");
 assert.equal(invalidatedBreakdown.current.transition, null, "失效转换不应残留");
 
-console.log(`Stage regression passed: ${cases.length} assets + 3 transition guards`);
+console.log(`Stage regression passed: ${cases.length} assets + 4 transition/data guards`);

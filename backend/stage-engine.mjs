@@ -137,7 +137,8 @@ function transitionSnapshot(pending) {
 
 export function analyze(inputBars, asset = {}, options = {}) {
   const now = options.now ? new Date(options.now) : new Date();
-  const source = completedWeeklyBars(inputBars, asset, now);
+  const allSource = normalizeBars(inputBars);
+  const source = completedWeeklyBars(allSource, asset, now);
   let confirmedStage = null;
   let pending = null;
 
@@ -250,9 +251,31 @@ export function analyze(inputBars, asset = {}, options = {}) {
       ? Math.max(0, -latest.slope) + Math.max(0, -distance)
       : Math.max(0, 0.025 - Math.abs(latest.slope)) + Math.max(0, 0.08 - Math.abs(distance));
   const confidence = Math.round(Math.max(55, Math.min(94, 61 + fit * 220 + Math.abs(position - 0.5) * 12)));
+  const displayBars = [...bars];
+  allSource.forEach((bar, index) => {
+    if (bar.time <= latest.time) return;
+    const ma30 = sma(allSource, index, 30);
+    displayBars.push({
+      ...bar,
+      ma30,
+      slope: null,
+      recentSlope: null,
+      stage: latest.stage,
+      transition: null,
+      scores: null,
+      distance: ma30 ? bar.close / ma30 - 1 : null,
+      position52: rangePosition(allSource, index, 52),
+      volumeRatio: volumeRatio(allSource, index),
+      provisional: true,
+    });
+  });
+  const latestMarketBar = displayBars.at(-1);
+  const latestDistance = latestMarketBar.ma30
+    ? latestMarketBar.close / latestMarketBar.ma30 - 1
+    : null;
 
   return {
-    bars,
+    bars: displayBars,
     current: {
       stage: latest.stage,
       status: latest.transition ? "transition" : "confirmed",
@@ -268,6 +291,11 @@ export function analyze(inputBars, asset = {}, options = {}) {
       confidence,
       asOf: latest.time,
       usesCompletedWeek: true,
+      latestClose: latestMarketBar.close,
+      latestMa30: latestMarketBar.ma30,
+      latestDistance,
+      latestAsOf: latestMarketBar.time,
+      hasProvisionalBar: latestMarketBar.time !== latest.time,
     },
   };
 }
