@@ -8,6 +8,7 @@ const STAGES = [
 const form = document.querySelector("#searchForm");
 const input = document.querySelector("#symbolInput");
 const button = document.querySelector("#searchButton");
+const clearButton = document.querySelector("#clearButton");
 const notice = document.querySelector("#notice");
 const result = document.querySelector("#result");
 const datalist = document.querySelector("#assetOptions");
@@ -108,6 +109,10 @@ function render(asset, data) {
         </section>
       </div>
     </section>`;
+  requestAnimationFrame(() => {
+    const chart = result.querySelector(".chart-wrap");
+    if (chart) chart.scrollLeft = chart.scrollWidth - chart.clientWidth;
+  });
 }
 
 function registerAsset(asset) {
@@ -156,6 +161,7 @@ async function load(rawCode) {
     if (!data.analysis?.current) throw new Error("后台分析结果格式异常");
     render(asset, data);
     input.value = asset.symbol;
+    updateClearButton();
     Object.values(selects).forEach((select) => {
       select.value = asset.symbol;
     });
@@ -196,10 +202,22 @@ form.addEventListener("submit", (event) => {
   load(input.value);
 });
 
+function updateClearButton() {
+  clearButton.hidden = input.value.length === 0;
+}
+
+input.addEventListener("input", updateClearButton);
+clearButton.addEventListener("click", () => {
+  input.value = "";
+  updateClearButton();
+  input.focus();
+});
+
 Object.values(selects).forEach((select) => {
   select.addEventListener("change", () => {
     if (select.value) load(select.value);
   });
 });
 
+updateClearButton();
 initialize();
