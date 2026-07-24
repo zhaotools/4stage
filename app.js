@@ -80,7 +80,6 @@ function render(asset, data) {
       : transition
         ? "阶段信号正在切换 · 连续完整周线确认中"
         : `${analysis.current.slope > 0.002 ? "均线向上" : analysis.current.slope < -0.002 ? "均线向下" : "均线趋平"} · 完整周线确认`;
-  const evidenceTitle = transition ? `为什么正在转向 ${stage.short}` : `为什么是 ${stage.short}`;
   const evidenceRows = (analysis.current.evidence || []).map((item) => {
     const icon = item.state === "support" ? "✓" : item.state === "warning" ? "!" : "•";
     return `
@@ -90,6 +89,10 @@ function render(asset, data) {
         <strong>${item.value}</strong>
       </div>`;
   }).join("");
+  const evidenceContent = `
+    <header><b>当前阶段的证据</b><small>${stage.short} · 基于 ${analysis.current.asOf} 完整周线</small></header>
+    <div class="evidence-list">${evidenceRows}</div>
+    <p class="evidence-summary">${analysis.current.explanation || ""}</p>`;
   result.className = "";
   result.innerHTML = `
     <section class="workspace">
@@ -102,11 +105,7 @@ function render(asset, data) {
           <h2 class="${transition ? "is-transition" : ""}" style="color:${stage.color}">${stageHeading}</h2>
           <p>${stageSummary}</p>
         </div>
-        <section class="stage-evidence">
-          <header><b>${evidenceTitle}</b><small>基于 ${analysis.current.asOf} 完整周线</small></header>
-          <div class="evidence-list">${evidenceRows}</div>
-          <p class="evidence-summary">${analysis.current.explanation || ""}</p>
-        </section>
+        <section class="stage-evidence desktop-evidence">${evidenceContent}</section>
       </aside>
       <div class="analysis-area">
         <nav class="stage-tabs">${STAGES.map((item) => `<div class="${item.id === stage.id ? "active" : ""}" style="--stage:${item.color}"><b>${item.short}</b><span>${item.title}</span></div>`).join("")}</nav>
@@ -121,6 +120,7 @@ function render(asset, data) {
           <div class="chart-wrap">${chartSvg(analysis, asset.symbol)}</div>
           <div class="axis"><span>${analysis.bars.at(-220)?.time.slice(0, 4) || ""}</span><span>历史阶段</span><span>当前</span></div>
         </section>
+        <section class="stage-evidence mobile-evidence">${evidenceContent}</section>
       </div>
     </section>`;
   requestAnimationFrame(() => {
@@ -164,7 +164,13 @@ function populateSelect(select, group, label) {
     section.assets.push(asset);
   });
   const options = sections.map((section) => `<optgroup label="${section.name}">${section.assets.map((asset) => `<option value="${asset.symbol}">${asset.name} · ${asset.symbol}</option>`).join("")}</optgroup>`).join("");
-  select.innerHTML = `<option value="">${label}（${groupAssets.length}）</option>${options}`;
+  select.innerHTML = `<option value="">${label}</option>${options}`;
+  select.dataset.placeholder = label;
+  select.closest("label").dataset.display = label;
+}
+
+function updateSelectDisplay(select) {
+  select.closest("label").dataset.display = select.value || select.dataset.placeholder || "";
 }
 
 async function load(rawCode) {
@@ -189,6 +195,7 @@ async function load(rawCode) {
     updateClearButton();
     Object.values(selects).forEach((select) => {
       select.value = asset.symbol;
+      updateSelectDisplay(select);
     });
   } catch (error) {
     result.className = "loading-card";
@@ -240,6 +247,7 @@ clearButton.addEventListener("click", () => {
 
 Object.values(selects).forEach((select) => {
   select.addEventListener("change", () => {
+    updateSelectDisplay(select);
     if (select.value) load(select.value);
   });
 });
