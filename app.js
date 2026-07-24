@@ -21,12 +21,6 @@ const selects = {
 let assets = [];
 let lookup = new Map();
 
-function formatNumber(value) {
-  if (Math.abs(value) >= 1000) return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
-  if (Math.abs(value) >= 10) return value.toFixed(2);
-  return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
-}
-
 function chartSvg(analysis, code) {
   const bars = analysis.bars.filter((bar) => bar.stage && bar.ma30).slice(-220);
   if (!bars.length) return `<p class="empty-chart">历史数据不足</p>`;
@@ -86,14 +80,16 @@ function render(asset, data) {
       : transition
         ? "阶段信号正在切换 · 连续完整周线确认中"
         : `${analysis.current.slope > 0.002 ? "均线向上" : analysis.current.slope < -0.002 ? "均线向下" : "均线趋平"} · 完整周线确认`;
-  const interpretation = transition
-    ? `系统已识别${fromStage.short}向${stage.short}的${transition.label}，始于 ${transition.startedAt}。当前确认进度为 ${transition.confirmationWeeks}/${transition.requiredWeeks} 周；满足连续完整周线条件后才确认新阶段，信号失效则恢复原阶段。K线行情更新至 ${analysis.current.latestAsOf}。`
-    : `阶段判断仅使用截至 ${analysis.current.asOf} 的已收盘完整周线；K线行情更新至 ${analysis.current.latestAsOf}，未完成周线只用于行情展示，不参与阶段确认。`;
-  const latest = analysis.bars.at(-1);
-  const prior = analysis.bars.at(-2);
-  const change = latest && prior ? latest.close / prior.close - 1 : 0;
-  const latestClose = analysis.current.latestClose ?? latest?.close ?? analysis.current.close;
-  const latestDistance = analysis.current.latestDistance ?? analysis.current.distance;
+  const evidenceTitle = transition ? `为什么正在转向 ${stage.short}` : `为什么是 ${stage.short}`;
+  const evidenceRows = (analysis.current.evidence || []).map((item) => {
+    const icon = item.state === "support" ? "✓" : item.state === "warning" ? "!" : "•";
+    return `
+      <div class="evidence-row ${item.state}">
+        <i>${icon}</i>
+        <div><b>${item.label}</b><small>${item.detail}</small></div>
+        <strong>${item.value}</strong>
+      </div>`;
+  }).join("");
   result.className = "";
   result.innerHTML = `
     <section class="workspace">
@@ -106,16 +102,11 @@ function render(asset, data) {
           <h2 class="${transition ? "is-transition" : ""}" style="color:${stage.color}">${stageHeading}</h2>
           <p>${stageSummary}</p>
         </div>
-        <div class="quote-box">
-          <div><small>最新价格</small><b>${formatNumber(latestClose)}</b></div>
-          <div><small>最新周涨跌</small><b class="${change < 0 ? "down" : "positive"}">${change >= 0 ? "+" : ""}${(change * 100).toFixed(2)}%</b></div>
-          <div><small>阶段置信度</small><b>${analysis.current.confidence}%</b></div>
-          <div><small>最新距30周均线</small><b class="${latestDistance < 0 ? "down" : "positive"}">${latestDistance >= 0 ? "+" : ""}${(latestDistance * 100).toFixed(2)}%</b></div>
-        </div>
-        <div class="interpretation">
-          <b>ⓘ 当前状态解读</b>
-          <p>${interpretation}</p>
-        </div>
+        <section class="stage-evidence">
+          <header><b>${evidenceTitle}</b><small>基于 ${analysis.current.asOf} 完整周线</small></header>
+          <div class="evidence-list">${evidenceRows}</div>
+          <p class="evidence-summary">${analysis.current.explanation || ""}</p>
+        </section>
       </aside>
       <div class="analysis-area">
         <nav class="stage-tabs">${STAGES.map((item) => `<div class="${item.id === stage.id ? "active" : ""}" style="--stage:${item.color}"><b>${item.short}</b><span>${item.title}</span></div>`).join("")}</nav>

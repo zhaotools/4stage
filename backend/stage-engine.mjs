@@ -161,6 +161,118 @@ function transitionSnapshot(pending) {
   };
 }
 
+function percent(value, digits = 2) {
+  return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(digits)}%`;
+}
+
+function evidenceState(supported, contradicted = false) {
+  if (supported) return "support";
+  return contradicted ? "warning" : "neutral";
+}
+
+function buildStageEvidence(stage, metrics, isTransition) {
+  const { distance, slope, fastDistance, position52 } = metrics;
+  let evidence;
+
+  if (stage === 2) {
+    evidence = [
+      {
+        label: "价格与MA30",
+        value: `${distance >= 0 ? "高于" : "低于"} ${Math.abs(distance * 100).toFixed(2)}%`,
+        detail: "S2通常要求价格运行在30周均线上方",
+        state: evidenceState(distance > 0, distance <= 0),
+      },
+      {
+        label: "MA30方向",
+        value: `5周斜率 ${percent(slope)}`,
+        detail: "上升的长期均线代表趋势方向向上",
+        state: evidenceState(slope > 0.002, slope < 0),
+      },
+      {
+        label: "10/30周结构",
+        value: `MA10 ${fastDistance >= 0 ? "高于" : "低于"} MA30 ${Math.abs(fastDistance * 100).toFixed(2)}%`,
+        detail: "中期均线位于长期均线上方支持上涨结构",
+        state: evidenceState(fastDistance > 0, fastDistance < 0),
+      },
+      {
+        label: "52周位置",
+        value: `区间 ${Math.round(position52 * 100)}%`,
+        detail: "位于年度区间中上部更符合趋势发展阶段",
+        state: evidenceState(position52 > 0.55, position52 < 0.45),
+      },
+    ];
+  } else if (stage === 4) {
+    evidence = [
+      {
+        label: "价格与MA30",
+        value: `${distance < 0 ? "低于" : "高于"} ${Math.abs(distance * 100).toFixed(2)}%`,
+        detail: "S4通常表现为价格运行在30周均线下方",
+        state: evidenceState(distance < 0, distance >= 0),
+      },
+      {
+        label: "MA30方向",
+        value: `5周斜率 ${percent(slope)}`,
+        detail: "下降的长期均线代表趋势方向向下",
+        state: evidenceState(slope < -0.002, slope > 0),
+      },
+      {
+        label: "10/30周结构",
+        value: `MA10 ${fastDistance < 0 ? "低于" : "高于"} MA30 ${Math.abs(fastDistance * 100).toFixed(2)}%`,
+        detail: "中期均线位于长期均线下方支持下降结构",
+        state: evidenceState(fastDistance < 0, fastDistance > 0),
+      },
+      {
+        label: "52周位置",
+        value: `区间 ${Math.round(position52 * 100)}%`,
+        detail: "位于年度区间中下部更符合风险释放阶段",
+        state: evidenceState(position52 < 0.45, position52 > 0.55),
+      },
+    ];
+  } else {
+    const bottom = stage === 1;
+    evidence = [
+      {
+        label: "MA30形态",
+        value: `5周斜率 ${percent(slope)}`,
+        detail: "横盘阶段的重要特征是长期均线逐渐走平",
+        state: evidenceState(Math.abs(slope) < (bottom ? 0.012 : 0.015), Math.abs(slope) >= 0.02),
+      },
+      {
+        label: "价格与MA30",
+        value: `偏离 ${percent(distance)}`,
+        detail: "价格围绕长期均线震荡，而非远离均线单边运行",
+        state: evidenceState(Math.abs(distance) < (bottom ? 0.06 : 0.08), Math.abs(distance) >= 0.12),
+      },
+      {
+        label: "52周位置",
+        value: `区间 ${Math.round(position52 * 100)}%`,
+        detail: bottom ? "偏低位置的横盘更接近底部构筑" : "偏高位置的横盘更接近顶部构筑",
+        state: bottom
+          ? evidenceState(position52 < 0.58, position52 > 0.72)
+          : evidenceState(position52 > 0.48, position52 < 0.35),
+      },
+      {
+        label: "10/30周收敛",
+        value: `偏离 ${percent(fastDistance)}`,
+        detail: "中长期均线靠近，说明单边趋势动能正在减弱",
+        state: evidenceState(Math.abs(fastDistance) < 0.03, Math.abs(fastDistance) >= 0.06),
+      },
+    ];
+  }
+
+  const supporting = evidence.filter((item) => item.state === "support").map((item) => item.label);
+  const warnings = evidence.filter((item) => item.state === "warning").map((item) => item.label);
+  const summary = [
+    supporting.length
+      ? `主要支持证据来自${supporting.join("、")}。`
+      : "当前核心条件尚未形成一致支持。",
+    warnings.length ? `${warnings.join("、")}仍与目标阶段存在分歧。` : "",
+    isTransition ? "当前仍是转换状态，需要后续完整周线继续确认。" : "",
+  ].join("");
+
+  return { evidence, summary };
+}
+
 export function analyze(inputBars, asset = {}, options = {}) {
   const now = options.now ? new Date(options.now) : new Date();
   const allSource = normalizeBars(inputBars);
@@ -262,6 +374,7 @@ export function analyze(inputBars, asset = {}, options = {}) {
       transition,
       scores: metrics.score,
       distance: metrics.distance,
+      fastDistance: metrics.fastDistance,
       position52: position,
       volumeRatio: volume,
     };
@@ -299,6 +412,16 @@ export function analyze(inputBars, asset = {}, options = {}) {
   const latestDistance = latestMarketBar.ma30
     ? latestMarketBar.close / latestMarketBar.ma30 - 1
     : null;
+  const explanation = buildStageEvidence(
+    latest.stage,
+    {
+      distance,
+      slope: latest.slope,
+      fastDistance: latest.fastDistance,
+      position52: position,
+    },
+    Boolean(latest.transition),
+  );
 
   return {
     bars: displayBars,
@@ -314,6 +437,8 @@ export function analyze(inputBars, asset = {}, options = {}) {
       position52: position,
       volumeRatio: latest.volumeRatio,
       scores: latest.scores,
+      evidence: explanation.evidence,
+      explanation: explanation.summary,
       confidence,
       asOf: latest.time,
       usesCompletedWeek: true,

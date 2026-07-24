@@ -44,6 +44,28 @@ for (const expected of cases) {
   assert.equal(current.usesCompletedWeek, true, `${expected.symbol}: 缺少完整周线标志`);
   assert.equal(current.stage, expected.stage, `${expected.symbol}: 当前阶段回归失败`);
   assert.equal(current.status, expected.status, `${expected.symbol}: 转换状态回归失败`);
+  assert.equal(current.evidence.length, 4, `${expected.symbol}: 应输出4条核心阶段证据`);
+  assert.equal(new Set(current.evidence.map((item) => item.label)).size, 4, `${expected.symbol}: 阶段证据不得重复`);
+  assert.ok(current.explanation.length > 10, `${expected.symbol}: 缺少阶段解释结论`);
+  current.evidence.forEach((item) => {
+    assert.ok(["support", "neutral", "warning"].includes(item.state), `${expected.symbol}: 非法证据状态`);
+    assert.ok(item.label && item.value && item.detail, `${expected.symbol}: 阶段证据字段不完整`);
+  });
+
+  if (current.stage === 2) {
+    assert.equal(
+      current.evidence[0].state,
+      current.distance > 0 ? "support" : "warning",
+      `${expected.symbol}: S2价格位置证据与完整周线不一致`,
+    );
+  }
+  if (current.stage === 4) {
+    assert.equal(
+      current.evidence[0].state,
+      current.distance < 0 ? "support" : "warning",
+      `${expected.symbol}: S4价格位置证据与完整周线不一致`,
+    );
+  }
 
   if (expected.transition) {
     assert.ok(current.transition, `${expected.symbol}: 应存在阶段转换`);
@@ -96,7 +118,7 @@ const withIncompleteWeek = analyze(
   { now: NOW },
 );
 
-for (const key of ["stage", "status", "transition", "close", "ma30", "slope", "distance", "confidence", "asOf"]) {
+for (const key of ["stage", "status", "transition", "close", "ma30", "slope", "distance", "confidence", "evidence", "explanation", "asOf"]) {
   assert.deepEqual(
     withIncompleteWeek.current[key],
     baseline.current[key],
@@ -166,4 +188,4 @@ assert.deepEqual(
   "日线必须正确聚合为包含本周最新交易日的周K",
 );
 
-console.log(`Stage regression passed: ${cases.length} assets + 5 transition/data guards`);
+console.log(`Stage regression passed: ${cases.length} assets + evidence checks + 5 transition/data guards`);
