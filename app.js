@@ -21,11 +21,21 @@ const selects = {
 let assets = [];
 let lookup = new Map();
 
+function formatNumber(value) {
+  if (Math.abs(value) >= 1000) return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (Math.abs(value) >= 10) return value.toFixed(2);
+  return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function visibleChartBars(analysis) {
+  return analysis.bars.filter((bar) => bar.stage && bar.ma30).slice(-220);
+}
+
 function chartSvg(analysis, code) {
-  const bars = analysis.bars.filter((bar) => bar.stage && bar.ma30).slice(-220);
+  const bars = visibleChartBars(analysis);
   if (!bars.length) return `<p class="empty-chart">历史数据不足</p>`;
   const w = 1100;
-  const h = 350;
+  const h = window.matchMedia("(max-width: 760px)").matches ? 350 : 560;
   const p = 28;
   const low = Math.min(...bars.map((bar) => bar.low)) * 0.94;
   const high = Math.max(...bars.map((bar) => bar.high)) * 1.06;
@@ -53,7 +63,66 @@ function chartSvg(analysis, code) {
     return `<line x1="${x(index)}" x2="${x(index)}" y1="${y(bar.high)}" y2="${y(bar.low)}" stroke="${color}"/><rect x="${x(index) - candleWidth / 2}" y="${Math.min(y(bar.open), y(bar.close))}" width="${candleWidth}" height="${Math.max(1.5, Math.abs(y(bar.open) - y(bar.close)))}" fill="${color}"/>`;
   }).join("");
   const ma = bars.map((bar, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(bar.ma30).toFixed(1)}`).join(" ");
-  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${code}历史周线">${backgrounds}${candles}<path d="${ma}" fill="none" stroke="#72a8ff" stroke-width="2"/></svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${code}历史周线">${backgrounds}${candles}<path d="${ma}" fill="none" stroke="#72a8ff" stroke-width="2"/><line class="chart-hover-line" x1="0" x2="0" y1="${p}" y2="${h - p}"/><circle class="chart-hover-dot" cx="0" cy="0" r="4"/></svg><div class="chart-tooltip" hidden></div>`;
+}
+
+function chartAxis(analysis) {
+  const bars = visibleChartBars(analysis);
+  if (!bars.length) return "";
+  const tickCount = 7;
+  const indexes = Array.from({ length: tickCount }, (_, index) => (
+    Math.round(index * (bars.length - 1) / (tickCount - 1))
+  ));
+  return indexes.map((index) => `<span>${bars[index].time.slice(0, 7)}</span>`).join("");
+}
+
+function bindChartTooltip(container, analysis) {
+  const bars = visibleChartBars(analysis);
+  const svg = container.querySelector("svg");
+  const tooltip = container.querySelector(".chart-tooltip");
+  const hoverLine = container.querySelector(".chart-hover-line");
+  const hoverDot = container.querySelector(".chart-hover-dot");
+  if (!bars.length || !svg || !tooltip || !hoverLine || !hoverDot) return;
+
+  const padding = 28;
+  const low = Math.min(...bars.map((bar) => bar.low)) * 0.94;
+  const high = Math.max(...bars.map((bar) => bar.high)) * 1.06;
+
+  svg.addEventListener("mousemove", (event) => {
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+    const chartX = (event.clientX - rect.left) / rect.width * viewBox.width;
+    const ratio = Math.max(0, Math.min(1, (chartX - padding) / (viewBox.width - padding * 2)));
+    const index = Math.round(ratio * (bars.length - 1));
+    const bar = bars[index];
+    const stage = STAGES[bar.stage - 1];
+    const x = padding + index / Math.max(1, bars.length - 1) * (viewBox.width - padding * 2);
+    const y = viewBox.height - padding
+      - (bar.close - low) / (high - low) * (viewBox.height - padding * 2);
+
+    hoverLine.setAttribute("x1", x);
+    hoverLine.setAttribute("x2", x);
+    hoverLine.classList.add("visible");
+    hoverDot.setAttribute("cx", x);
+    hoverDot.setAttribute("cy", y);
+    hoverDot.style.fill = stage.color;
+    hoverDot.classList.add("visible");
+    tooltip.innerHTML = `<b>${bar.time}</b><span>收盘价　${formatNumber(bar.close)}</span><strong style="color:${stage.color}">${stage.short} ${stage.title}</strong>`;
+    tooltip.hidden = false;
+
+    const wrapRect = container.getBoundingClientRect();
+    const cursorX = event.clientX - wrapRect.left;
+    const cursorY = event.clientY - wrapRect.top;
+    const placeLeft = cursorX > wrapRect.width * 0.72;
+    tooltip.style.left = `${container.scrollLeft + cursorX + (placeLeft ? -tooltip.offsetWidth - 14 : 14)}px`;
+    tooltip.style.top = `${Math.max(8, cursorY - tooltip.offsetHeight - 12)}px`;
+  });
+
+  svg.addEventListener("mouseleave", () => {
+    tooltip.hidden = true;
+    hoverLine.classList.remove("visible");
+    hoverDot.classList.remove("visible");
+  });
 }
 
 function marketName(asset) {
@@ -118,14 +187,17 @@ function render(asset, data) {
             </div>
           </div>
           <div class="chart-wrap">${chartSvg(analysis, asset.symbol)}</div>
-          <div class="axis"><span>${analysis.bars.at(-220)?.time.slice(0, 4) || ""}</span><span>历史阶段</span><span>当前</span></div>
+          <div class="axis">${chartAxis(analysis)}</div>
         </section>
         <section class="stage-evidence mobile-evidence">${evidenceContent}</section>
       </div>
     </section>`;
   requestAnimationFrame(() => {
     const chart = result.querySelector(".chart-wrap");
-    if (chart) chart.scrollLeft = chart.scrollWidth - chart.clientWidth;
+    if (chart) {
+      chart.scrollLeft = chart.scrollWidth - chart.clientWidth;
+      bindChartTooltip(chart, analysis);
+    }
   });
 }
 

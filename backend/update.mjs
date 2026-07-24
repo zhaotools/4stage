@@ -323,7 +323,7 @@ const manifest = selected.map((asset) => successfulBySymbol.get(asset.symbol) ||
   || a.symbol.localeCompare(b.symbol));
 
 const output = {
-  version: "V1.0.12",
+  version: "V1.0.13",
   generatedAt: new Date().toISOString(),
   count: manifest.length,
   availableCount: successfulAssets.length,
